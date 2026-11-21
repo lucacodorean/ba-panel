@@ -11,7 +11,10 @@
     ],
     "require": {
         "php": "^8.3",
-        "illuminate/support": "^13.5"
+        "illuminate/routing": "^13.5",
+        "illuminate/support": "^13.5",
+        "illuminate/view": "^13.5",
+        "neuron-core/neuron-ai": "^4.1"
     },
     "require-dev": {
         "orchestra/testbench": "^11.3",

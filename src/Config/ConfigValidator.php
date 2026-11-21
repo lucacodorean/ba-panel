@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Lucacodorean\BaPanel\Config;
 
+use Lucacodorean\BaPanel\Ai\ProviderFactory;
 use Lucacodorean\BaPanel\Exceptions\InvalidConfigurationException;
 
 final class ConfigValidator
@@ -101,6 +102,13 @@ final class ConfigValidator
             if (! is_string($value) || trim($value) === '') {
                 $errors[] = sprintf(self::MESSAGE_REQUIRED, $envName);
             }
+        }
+
+        // Check the provider name only when it is given. A missing value already has an error.
+        $provider = $ai[self::CONFIG_PROVIDER] ?? null;
+
+        if (is_string($provider) && trim($provider) !== '' && ! ProviderFactory::supports($provider)) {
+            $errors[] = ProviderFactory::unsupportedMessage($provider);
         }
 
         return $errors;

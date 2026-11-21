@@ -51,6 +51,9 @@ abstract class TestCase extends Orchestra
      */
     protected function defineEnvironment($app): void
     {
+        // The web middleware encrypts cookies. The encrypter needs an application key.
+        $app['config']->set('app.key', 'base64:'.base64_encode(str_repeat('k', 32)));
+
         foreach ($this->baPanelConfig as $key => $value) {
             $app['config']->set('ba-panel.'.$key, $value);
         }
