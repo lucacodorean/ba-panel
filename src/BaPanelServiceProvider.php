@@ -15,9 +15,4 @@ final class BaPanelServiceProvider extends ServiceProvider
     public function boot(): void
     {
     }
-
-    public static function routingTest(): bool {
-	return true;
-    }
 }
-
