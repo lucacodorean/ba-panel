@@ -1,0 +1,7 @@
+name: ba-panel
+type: php
+docroot: ""
+php_version: "8.4"
+webserver_type: nginx-fpm
+composer_version: "2"
+omit_containers: [db]
