@@ -1,0 +1,44 @@
+{
+    "name": "lucacodorean/ba-panel",
+    "description": "A PHP package intended to create a panel for the Business analysts to access the documentation saved at project level.",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Lucacodorean\\BaPanel\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Lucacodorean\\BaPanel\\Tests\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Luca Codorean",
+            "email": "luca.codorean@evozon.com"
+        }
+    ],
+    "require": {
+        "illuminate/support": "^13.5"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Lucacodorean\\BaPanel\\BaPanelServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "require-dev": {
+        "orchestra/testbench": "^11.3",
+        "pestphp/pest": "^5.3"
+    },
+    "scripts": {
+        "test": "pest"
+    }
+}
