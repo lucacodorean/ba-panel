@@ -3,5 +3,13 @@
 .phpunit.result.cache
 .env
 
+# PHP environment emulator.
+.ddev
 # Agentic AI development tool.
 /.claude
+/prompts
+CLAUDE.md
+AGENTS.md
+
+# IDE config
+.idea
