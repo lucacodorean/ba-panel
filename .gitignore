@@ -13,3 +13,5 @@ AGENTS.md
 
 # IDE config
 .idea
+# Local testbench CLI config.
+testbench.yaml

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\ServiceProvider;
+use Lucacodorean\BaPanel\Ai\ProviderFactory;
 use Lucacodorean\BaPanel\BaPanelServiceProvider;
 use Lucacodorean\BaPanel\Exceptions\InvalidConfigurationException;
 use Lucacodorean\BaPanel\Tests\Support\TemporaryFilesystem;
@@ -93,5 +94,36 @@ it('resolves relative docs paths against the application base path on boot', fun
         $this->fail('Expected InvalidConfigurationException.');
     } catch (InvalidConfigurationException $exception) {
         expect($exception->errors())->toBe(['BAP_DOCS_ARRAY path does not exist: '.$relative]);
+    }
+});
+
+it('registers the views publish path under the ba-panel-views tag', function (): void {
+    $paths = ServiceProvider::pathsToPublish(BaPanelServiceProvider::class, 'ba-panel-views');
+
+    expect($paths)->toHaveCount(1);
+
+    $source = (string) array_key_first($paths);
+
+    expect(realpath($source))->toBe(realpath(dirname(__DIR__, 2).'/resources/views'))
+        ->and($paths[$source])->toBe(resource_path('views/vendor/ba-panel'));
+});
+
+it('throws on boot when enabled with an unsupported provider', function (): void {
+    /** @var TestCase $this */
+    $fs = new TemporaryFilesystem;
+
+    try {
+        $this->withBaPanelConfig([
+            'enabled' => true,
+            'ai' => ['provider' => 'ollama', 'model' => 'llama-test', 'key' => 'secret-key'],
+            'docs' => [$fs->directory('docs')],
+        ]);
+
+        $this->rebootApplication();
+        $this->fail('Expected InvalidConfigurationException.');
+    } catch (InvalidConfigurationException $exception) {
+        expect($exception->errors())->toBe([ProviderFactory::unsupportedMessage('ollama')]);
+    } finally {
+        $fs->cleanup();
     }
 });

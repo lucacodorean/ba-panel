@@ -17,6 +17,15 @@ A PHP package intended to create a panel for the Business analysts to access the
 
    This command creates `config/ba-panel.php` in your application.
 
+3. Optional: publish the views.
+
+   ```bash
+   php artisan vendor:publish --tag=ba-panel-views
+   ```
+
+   This command copies the views to `resources/views/vendor/ba-panel` in your application.
+   Laravel uses the published views before the package views.
+
 Laravel package discovery registers `Lucacodorean\BaPanel\BaPanelServiceProvider`.
 You do not need to register the service provider manually.
 
@@ -27,12 +36,29 @@ Set the environment variables in the `.env` file of your application.
 | variable          | type   | default | required                     | description                                              |
 |-------------------|--------|---------|------------------------------|----------------------------------------------------------|
 | `BAP_ENABLED`     | bool   | `false` | no                           | Enables the panel. Enables the configuration validation. |
-| `BAP_AI_PROVIDER` | string | none    | yes, when `BAP_ENABLED=true` | The AI provider name.                                    |
+| `BAP_AI_PROVIDER` | string | none    | yes, when `BAP_ENABLED=true` | The AI provider name. See the supported values below.    |
 | `BAP_AI_MODEL`    | string | none    | yes, when `BAP_ENABLED=true` | The AI model name.                                       |
 | `BAP_AI_KEY`      | string | none    | yes, when `BAP_ENABLED=true` | The API key for the AI provider.                         |
 | `BAP_DOCS_ARRAY`  | string | empty   | yes, when `BAP_ENABLED=true` | A comma-separated list of documentation paths.           |
 
 The package reads `BAP_ENABLED` as a boolean. The values `true`, `1`, `yes`, and `on` enable the panel.
+
+### `BAP_AI_PROVIDER` values
+
+The package uses [neuron-ai](https://github.com/neuron-core/neuron-ai) to connect to the AI provider.
+
+| value       | provider  |
+|-------------|-----------|
+| `anthropic` | Anthropic |
+| `openai`    | OpenAI    |
+| `gemini`    | Gemini    |
+| `mistral`   | Mistral   |
+| `deepseek`  | DeepSeek  |
+| `xai`       | xAI Grok  |
+
+- The value ignores case and outer whitespace.
+- Each provider needs an API key in `BAP_AI_KEY`.
+- The package does not support providers without an API key, for example Ollama, Bedrock, Vertex, and Azure.
 
 ### `BAP_DOCS_ARRAY` rules
 
@@ -54,11 +80,28 @@ BAP_AI_KEY=your-api-key
 BAP_DOCS_ARRAY="docs, README.md"
 ```
 
+## Route
+
+| method | URI         | route name | middleware |
+|--------|-------------|------------|------------|
+| `GET`  | `/ba-panel` | `ba-panel` | `web`      |
+
+- The route shows the panel view `ba-panel::panel`.
+- The package registers the route only when `BAP_ENABLED` is `true`.
+- When `BAP_ENABLED` is `false`, the route does not exist. A request to `/ba-panel` gets a 404 response.
+
+Use the route name to create a link:
+
+```php
+route('ba-panel');
+```
+
 ## Validation
 
 - The package validates the configuration at boot.
 - The package validates the configuration only when `BAP_ENABLED` is `true`.
 - When `BAP_ENABLED` is `false`, the package does no validation. Installation and package discovery work before you set the variables.
+- The value of `BAP_AI_PROVIDER` must be a supported value.
 - The package checks all rules before it reports an error.
 - The package throws one `Lucacodorean\BaPanel\Exceptions\InvalidConfigurationException` with all errors.
 - The exception message lists each error on a separate line.
@@ -79,3 +122,4 @@ try {
 ```
 
 For the reasons behind this behavior, see [ADR 0001](docs/adr/0001-validate-env-contract-at-boot.md).
+For the choice of the AI provider integration, see [ADR 0002](docs/adr/0002-adopt-neuron-ai-as-agent-development-kit.md).

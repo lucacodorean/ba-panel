@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Lucacodorean\BaPanel\Ai\ProviderFactory;
 use Lucacodorean\BaPanel\Config\ConfigValidator;
 use Lucacodorean\BaPanel\Exceptions\InvalidConfigurationException;
 use Lucacodorean\BaPanel\Tests\Support\TemporaryFilesystem;
@@ -223,3 +224,51 @@ it('formats a single error exactly', function (): void {
         );
     }
 });
+
+it('reports an unsupported provider', function (): void {
+    $directory = fixtures()->directory('docs');
+
+    expect(validationErrors(fixtures()->root(), validBaPanelConfig([$directory], ['ai' => ['provider' => 'ollama']])))
+        ->toBe([ProviderFactory::unsupportedMessage('ollama')]);
+});
+
+it('accepts each supported provider regardless of case and outer whitespace', function (string $provider): void {
+    $directory = fixtures()->directory('docs');
+
+    expect(validationErrors(fixtures()->root(), validBaPanelConfig([$directory], ['ai' => ['provider' => $provider]])))
+        ->toBeNull();
+})->with([
+    'anthropic', 'openai', 'gemini', 'mistral', 'deepseek', 'xai', ' OpenAI ', 'ANTHROPIC',
+]);
+
+it('adds the unsupported provider error after the required-value errors', function (): void {
+    $config = [
+        'enabled' => true,
+        'ai' => ['provider' => 'ollama', 'model' => null, 'key' => ''],
+        'docs' => [fixtures()->directory('docs')],
+    ];
+
+    expect(validationErrors(fixtures()->root(), $config))->toBe([
+        'BAP_AI_MODEL is required when BAP_ENABLED is true.',
+        'BAP_AI_KEY is required when BAP_ENABLED is true.',
+        ProviderFactory::unsupportedMessage('ollama'),
+    ]);
+});
+
+it('reports only the required error for a blank or missing provider', function (mixed $provider): void {
+    $config = validBaPanelConfig([fixtures()->directory('docs')]);
+
+    if ($provider === 'unset') {
+        unset($config['ai']['provider']);
+    } else {
+        $config['ai']['provider'] = $provider;
+    }
+
+    expect(validationErrors(fixtures()->root(), $config))
+        ->toBe(['BAP_AI_PROVIDER is required when BAP_ENABLED is true.']);
+})->with([
+    'missing' => ['unset'],
+    'null' => [null],
+    'empty' => [''],
+    'whitespace' => ['   '],
+]);
