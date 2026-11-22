@@ -27,6 +27,19 @@
 
             document.documentElement.dataset.theme = theme;
         })();
+
+        /* Apply the stored state of the feasibility agent panel before the first paint. The panel is closed by default. */
+        (function () {
+            var agent = null;
+
+            try {
+                agent = window.localStorage.getItem('ba-panel-agent');
+            } catch (error) {
+                agent = null;
+            }
+
+            document.documentElement.dataset.agent = agent === 'open' ? 'open' : 'closed';
+        })();
     </script>
     <style>
         :root {
@@ -49,6 +62,7 @@
             --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
             --header-height: 60px;
             --agent-width: 400px;
+            --rail-width: 52px;
             --border: 1px solid var(--color-border);
         }
 
@@ -212,11 +226,63 @@
             font-size: 13px;
         }
 
+        /* The workspace has two parts: the columns and the rail. The rail stays at the right end on all screens. */
         .workspace {
             display: flex;
             flex: 1 1 auto;
-            flex-wrap: wrap;
             min-height: 0;
+        }
+
+        .workspace-columns {
+            display: flex;
+            flex: 1 1 auto;
+            flex-wrap: wrap;
+            min-width: 0;
+            min-height: 0;
+        }
+
+        /* Menu rail */
+
+        .rail {
+            display: flex;
+            flex: 0 0 var(--rail-width);
+            flex-direction: column;
+            justify-content: flex-end;
+            width: var(--rail-width);
+            background-color: var(--color-background);
+        }
+
+        /* On narrow screens the page grows. The footer stays at the bottom of the viewport while the rail is visible. */
+        .rail-footer {
+            position: sticky;
+            bottom: 0;
+            display: flex;
+            justify-content: center;
+            padding: 8px 0 12px;
+            background-color: var(--color-background);
+        }
+
+        /* The rail selector raises the specificity above the .icon-button rule. */
+        .rail .rail-button {
+            width: 40px;
+            padding: 0;
+            height: 40px;
+            color: var(--color-muted);
+            border: 1px solid transparent;
+            border-radius: 10px;
+        }
+
+        .rail .rail-button:hover {
+            color: var(--color-text);
+            border-color: var(--color-border);
+        }
+
+        /* The data-agent rule shows the active style before the script sets aria-expanded. */
+        .rail .rail-button[aria-expanded="true"],
+        :root[data-agent="open"] .rail .rail-button {
+            color: var(--color-accent);
+            background-color: var(--color-accent-soft);
+            border-color: var(--color-accent);
         }
 
         /* Documentation section */
@@ -735,6 +801,17 @@
             min-width: 0;
             min-height: 640px;
             background-color: var(--color-background);
+            border-right: var(--border);
+        }
+
+        /* The server sends the panel with the hidden attribute. The script removes the attribute later. */
+        /* For a stored open state, this rule shows the panel before the first paint. */
+        :root[data-agent="open"] .agent[hidden] {
+            display: flex !important;
+        }
+
+        :root[data-agent="closed"] .agent {
+            display: none;
         }
 
         .agent-header {
@@ -900,7 +977,7 @@
             }
 
             /* Keep one flex line. The line then gets the height of the container, not the height of the content. */
-            .workspace,
+            .workspace-columns,
             .docs-body {
                 flex-wrap: nowrap;
             }
@@ -948,109 +1025,120 @@
     </header>
 
     <main class="workspace">
-        <section class="docs" aria-labelledby="docs-title">
-            <div class="section-toolbar">
-                <div class="section-heading">
-                    <h2 id="docs-title" class="section-title">Documentation</h2>
-                    <span class="section-meta"><span data-file-count>{{ $fileCount }}</span> files · <span data-link-count>{{ $linkCount }}</span> links</span>
-                </div>
-
-                <div class="search-box" data-search>
-                    <label class="search" for="docs-filter">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
-                            <circle cx="11" cy="11" r="7"/>
-                            <path d="m20 20-3.5-3.5"/>
-                        </svg>
-                        <span class="sr-only">Filter files</span>
-                        <input id="docs-filter" class="search-input" type="search" name="filter" placeholder="Filter files" autocomplete="off" aria-controls="docs-filter-results" aria-expanded="false" data-search-input>
-                    </label>
-
-                    <div id="docs-filter-results" class="search-results" role="region" aria-label="Matching files" aria-live="polite" data-search-results hidden></div>
-                </div>
-            </div>
-
-            <div class="docs-body">
-                <div class="graph" role="region" aria-label="Documentation graph"></div>
-                <button type="button" class="button graph-show-all" data-graph-show-all hidden>Show all files</button>
-
-                <article class="reader" aria-labelledby="reader-title" aria-live="polite" data-reader>
-                    <div class="reader-bar">
-                        <span id="reader-title" class="reader-path" data-reader-path>No file open</span>
-                        <button type="button" class="icon-button reader-close" aria-label="Close file" data-reader-close>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
-                                <path d="M6 6l12 12M18 6 6 18"/>
-                            </svg>
-                        </button>
+        <div class="workspace-columns">
+            <section class="docs" aria-labelledby="docs-title">
+                <div class="section-toolbar">
+                    <div class="section-heading">
+                        <h2 id="docs-title" class="section-title">Documentation</h2>
+                        <span class="section-meta"><span data-file-count>{{ $fileCount }}</span> files · <span data-link-count>{{ $linkCount }}</span> links</span>
                     </div>
 
-                    <div class="reader-content" data-reader-content>
-                        <p class="reader-empty">Select a node in the graph to read the document.</p>
+                    <div class="search-box" data-search>
+                        <label class="search" for="docs-filter">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
+                                <circle cx="11" cy="11" r="7"/>
+                                <path d="m20 20-3.5-3.5"/>
+                            </svg>
+                            <span class="sr-only">Filter files</span>
+                            <input id="docs-filter" class="search-input" type="search" name="filter" placeholder="Filter files" autocomplete="off" aria-controls="docs-filter-results" aria-expanded="false" data-search-input>
+                        </label>
+
+                        <div id="docs-filter-results" class="search-results" role="region" aria-label="Matching files" aria-live="polite" data-search-results hidden></div>
                     </div>
-                </article>
-            </div>
-        </section>
-
-        <section class="agent" aria-labelledby="agent-title">
-            <div class="section-toolbar agent-header">
-                <div class="agent-heading">
-                    <h2 id="agent-title" class="section-title">Feasibility agent</h2>
-                    <span class="section-meta">Assesses a brief against the documentation</span>
                 </div>
 
-                <div class="agent-actions">
-                    <button type="button" class="button export-button" disabled>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-                            <path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>
-                        </svg>
-                        <span><span class="sr-only">Export as </span>.md</span>
-                    </button>
-                    <button type="button" class="button export-button export-button-primary" disabled>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-                            <path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>
-                        </svg>
-                        <span><span class="sr-only">Export as </span>.pdf</span>
-                    </button>
-                </div>
-            </div>
+                <div class="docs-body">
+                    <div class="graph" role="region" aria-label="Documentation graph"></div>
+                    <button type="button" class="button graph-show-all" data-graph-show-all hidden>Show all files</button>
 
-            <div class="conversation" aria-live="polite">
-                <div class="message">
-                    <p>Hi — describe what you’d like to build and I’ll assess its feasibility against the project documentation. Open a file on the left to add it as context.</p>
-                </div>
+                    <article class="reader" aria-labelledby="reader-title" aria-live="polite" data-reader hidden>
+                        <div class="reader-bar">
+                            <span id="reader-title" class="reader-path" data-reader-path>No file open</span>
+                            <button type="button" class="icon-button reader-close" aria-label="Close file" data-reader-close>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
+                                    <path d="M6 6l12 12M18 6 6 18"/>
+                                </svg>
+                            </button>
+                        </div>
 
-                <div class="suggestions">
-                    <span class="suggestions-label">Try</span>
-                    <button type="button" class="button suggestion">Assess the feasibility of a client portal with SSO</button>
-                    <button type="button" class="button suggestion">What information do you need from me to start?</button>
-                    <button type="button" class="button suggestion">Summarize risks based on the architecture docs</button>
+                        <div class="reader-content" data-reader-content></div>
+                    </article>
                 </div>
-            </div>
+            </section>
 
-            <div class="composer">
-                <div class="composer-box">
-                    <span class="context-chip" data-context hidden>
-                        <span>Context: <span data-context-name></span></span>
-                        <button type="button" class="icon-button context-remove" aria-label="Remove the document from context" data-context-remove>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
-                                <path d="M6 6l12 12M18 6 6 18"/>
+            <section id="agent-panel" class="agent" aria-labelledby="agent-title" data-agent-panel hidden>
+                <div class="section-toolbar agent-header">
+                    <div class="agent-heading">
+                        <h2 id="agent-title" class="section-title">Feasibility agent</h2>
+                        <span class="section-meta">Assesses a brief against the documentation</span>
+                    </div>
+
+                    <div class="agent-actions">
+                        <button type="button" class="button export-button" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                                <path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>
                             </svg>
+                            <span><span class="sr-only">Export as </span>.md</span>
                         </button>
-                    </span>
-
-                    <label class="sr-only" for="agent-message">Message the feasibility agent</label>
-                    <textarea id="agent-message" class="composer-input" name="message" rows="3" placeholder="Describe what you want to build…"></textarea>
-
-                    <div class="composer-footer">
-                        <span class="composer-hint">Enter to send · Shift+Enter for a new line</span>
-                        <button type="button" class="button icon-button send-button" aria-label="Send message" disabled>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-                                <path d="M12 19V5M5 12l7-7 7 7"/>
+                        <button type="button" class="button export-button export-button-primary" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                                <path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>
                             </svg>
+                            <span><span class="sr-only">Export as </span>.pdf</span>
                         </button>
                     </div>
                 </div>
+
+                <div class="conversation" aria-live="polite">
+                    <div class="message">
+                        <p>Hi — describe what you’d like to build and I’ll assess its feasibility against the project documentation. Open a file on the left to add it as context.</p>
+                    </div>
+
+                    <div class="suggestions">
+                        <span class="suggestions-label">Try</span>
+                        <button type="button" class="button suggestion">Assess the feasibility of a client portal with SSO</button>
+                        <button type="button" class="button suggestion">What information do you need from me to start?</button>
+                        <button type="button" class="button suggestion">Summarize risks based on the architecture docs</button>
+                    </div>
+                </div>
+
+                <div class="composer">
+                    <div class="composer-box">
+                        <span class="context-chip" data-context hidden>
+                            <span>Context: <span data-context-name></span></span>
+                            <button type="button" class="icon-button context-remove" aria-label="Remove the document from context" data-context-remove>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
+                                    <path d="M6 6l12 12M18 6 6 18"/>
+                                </svg>
+                            </button>
+                        </span>
+
+                        <label class="sr-only" for="agent-message">Message the feasibility agent</label>
+                        <textarea id="agent-message" class="composer-input" name="message" rows="3" placeholder="Describe what you want to build…"></textarea>
+
+                        <div class="composer-footer">
+                            <span class="composer-hint">Enter to send · Shift+Enter for a new line</span>
+                            <button type="button" class="button icon-button send-button" aria-label="Send message" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                                    <path d="M12 19V5M5 12l7-7 7 7"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <nav class="rail" aria-label="Panels">
+            <div class="rail-footer">
+                <button type="button" class="icon-button rail-button" aria-label="Feasibility agent" title="Show or hide the feasibility agent" aria-controls="agent-panel" aria-expanded="false" data-agent-toggle>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                        <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>
+                        <path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/>
+                    </svg>
+                </button>
             </div>
-        </section>
+        </nav>
     </main>
 </div>
 <script>
@@ -1102,6 +1190,57 @@
 
             render(next);
             store(next);
+        });
+    })();
+</script>
+<script>
+    /* The rail button shows and hides the feasibility agent panel. Store the state. */
+    (function () {
+        var storageKey = 'ba-panel-agent';
+        var root = document.documentElement;
+        var panel = document.querySelector('[data-agent-panel]');
+        var toggleButton = document.querySelector('[data-agent-toggle]');
+
+        if (!panel || !toggleButton) {
+            return;
+        }
+
+        var input = panel.querySelector('#agent-message');
+
+        function render(state) {
+            var isOpen = state === 'open';
+
+            root.dataset.agent = state;
+            panel.hidden = !isOpen;
+            toggleButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+
+            /* The graph listens to this event when the browser has no ResizeObserver. */
+            document.dispatchEvent(new CustomEvent('ba-panel:layout'));
+        }
+
+        function store(state) {
+            try {
+                window.localStorage.setItem(storageKey, state);
+            } catch (error) {
+                /* Storage is not available. Keep the state for this page only. */
+            }
+        }
+
+        render(root.dataset.agent === 'open' ? 'open' : 'closed');
+
+        /* A click opens a closed panel and closes an open panel. */
+        /* On open, the focus moves to the message field. On close, the focus stays on the rail button. */
+        toggleButton.addEventListener('click', function () {
+            var next = panel.hidden ? 'open' : 'closed';
+
+            render(next);
+            store(next);
+
+            if (next === 'open' && input) {
+                input.focus();
+            } else {
+                toggleButton.focus();
+            }
         });
     })();
 </script>
@@ -1427,9 +1566,14 @@
             var request = ++documentRequest;
             var node = nodesById[id];
 
+            currentPath = '';
+            readerPath.textContent = node ? node.path : 'Unknown file';
+            showReaderMessage('Loading the document…');
+            reader.scrollTop = 0;
             reader.hidden = false;
             reader.setAttribute('aria-busy', 'true');
             select(id);
+            relayout();
 
             fetch(documentUrl(id), { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
                 .then(function (response) {
@@ -1468,11 +1612,12 @@
             reader.removeAttribute('aria-busy');
             readerPath.textContent = 'No file open';
             readerPath.removeAttribute('title');
-            showReaderMessage('Select a node in the graph to read the document.');
+            readerContent.textContent = '';
             reader.scrollTop = 0;
             select(null);
             setContext(null);
             showFullGraph();
+            relayout();
 
             if (node && node.element) {
                 node.element.focus();
@@ -1544,6 +1689,36 @@
             width = Math.max(graphElement.clientWidth, 1);
             height = Math.max(graphElement.clientHeight, 1);
             svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+        }
+
+        /* Measure the graph again. Move the nodes by half the size change, so the graph stays at the center. Then restart the layout. */
+        function resize() {
+            var oldWidth = width;
+            var oldHeight = height;
+
+            measure();
+
+            if (width === oldWidth && height === oldHeight) {
+                return;
+            }
+
+            var dx = (width - oldWidth) / 2;
+            var dy = (height - oldHeight) / 2;
+
+            nodes.forEach(function (node) {
+                node.x = clamp(node.x + dx, EDGE_PADDING, Math.max(EDGE_PADDING, width - EDGE_PADDING));
+                node.y = clamp(node.y + dy, EDGE_PADDING, Math.max(EDGE_PADDING, height - EDGE_PADDING));
+            });
+
+            draw();
+            restart();
+        }
+
+        /* The reader or the agent panel changed the graph size. Without a ResizeObserver, update the graph here. */
+        function relayout() {
+            if (svg && !window.ResizeObserver) {
+                resize();
+            }
         }
 
         function placeNodes() {
@@ -1815,15 +1990,10 @@
             restart();
 
             if (window.ResizeObserver) {
-                new ResizeObserver(function () {
-                    measure();
-                    restart();
-                }).observe(graphElement);
+                new ResizeObserver(resize).observe(graphElement);
             } else {
-                window.addEventListener('resize', function () {
-                    measure();
-                    restart();
-                });
+                window.addEventListener('resize', resize);
+                document.addEventListener('ba-panel:layout', resize);
             }
 
             if (reducedMotion && reducedMotion.addEventListener) {
