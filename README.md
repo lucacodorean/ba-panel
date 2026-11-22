@@ -172,12 +172,13 @@ Invalid YAML gives no metadata. The package does not throw an exception. The tit
 
 - **Graph**: The panel shows the nodes and the edges. The graph floats. You can drag a node. The section header shows the number of files and links. The links count is the number of unique pairs of linked files. A bidirectional pair counts one time.
 - **Arrows**: A one-way edge has an arrow at the target end. A bidirectional edge has an arrow at each end. The arrows of the edges of the selected node use the accent color.
-- **Reader**: Click a node to open the document. The reader shows the path, the rendered Markdown, and the linked files. The linked files are the files that the links lead to from the document. A bidirectional link counts from both ends. Click a linked file to open it. A relative `.md` link in the text also opens that document.
+- **Reader**: The reader is hidden by default. The graph then uses the full width of the documentation section. Click a node to open the document. The reader then shows the document next to the graph. The reader shows the path, the rendered Markdown, and the linked files. The linked files are the files that the links lead to from the document. A bidirectional link counts from both ends. Click a linked file to open it. A relative `.md` link in the text also opens that document.
 - **Subgraph view**: When you open a document, the graph shows only the subgraph of that document. The subgraph contains the document and the files with a direct link to it. The direction of the link is not important: outgoing, incoming, and bidirectional links are included. The panel does not follow the links further. The panel shows an edge only when the two ends are visible. The panel hides the other nodes and their edges.
   - A file that only declares the opened document is visible in the subgraph. The reader does not list it in the linked files.
   - This is true for a click on a node, a linked file, a link in the document, or a filter result.
   - Click a node in the subgraph to open that document and show its subgraph.
-  - Click **Show all files** in the graph area to show the full graph again. The reader close button also shows the full graph.
+  - Click **Show all files** in the graph area to show the full graph again.
+  - Click the reader close button to close the document. The panel hides the reader. The graph shows the full graph and uses the full width again.
   - The section header always shows the counts of the full graph.
 - **Filter**: Type a query in the search field. The panel shows a list of files whose name matches the query. Click a result to open it.
   - The filter compares the query with the file names only.
@@ -185,6 +186,12 @@ Invalid YAML gives no metadata. The package does not throw an exception. The tit
   - Other words are compared with character trigrams. The match threshold is 0.8.
   - The typo tolerance is limited. For example, `endpionts` does not find `endpoints`.
   - The filter does not change the graph. Only an opened document changes the graph to the subgraph view.
+- **Feasibility agent panel**: The agent panel is closed by default. A narrow menu bar is at the right end of the page.
+  - The button at the bottom of the menu bar (**Feasibility agent**) is the only control for the panel.
+  - Click the button to open the panel. The focus moves to the message field.
+  - Click the button again to close the panel. The focus stays on the button.
+  - When the panel is closed, the documentation section uses the free width.
+  - The browser stores the state in `localStorage`, with the key `ba-panel-agent` and the value `open` or `closed`. A missing or invalid value gives the closed state. The panel applies the stored state before the first paint.
 
 The rendered Markdown escapes raw HTML. It removes unsafe links, for example `javascript:` links.
 

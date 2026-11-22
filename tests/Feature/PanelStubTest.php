@@ -307,8 +307,7 @@ it('shows the reader empty state before the first selection', function (): void 
     /** @var TestCase $this */
     $content = panelStubWithDocuments($this);
 
-    expect($content)->toContain('<p class="reader-empty">Select a node in the graph to read the document.</p>')
-        ->and($content)->toContain('data-reader-path>No file open</span>');
+    expect($content)->toContain('data-reader-path>No file open</span>');
 });
 
 it('hides the context chip before a document is open', function (): void {
@@ -392,11 +391,12 @@ it('keeps the reader bar sticky at the top', function (): void {
         ->toContain('top: 0');
 });
 
-it('keeps one flex line for the docs body on wide screens', function (): void {
+it('keeps one flex line for the workspace columns and the docs body on wide screens', function (): void {
     /** @var TestCase $this */
     $media = panelStubMedia(panelStubStyle(panelStubWithDocuments($this)), 'min-width:\s*1041px');
 
     expect($media)->not->toBe('')
+        ->and(panelStubDeclarations($media, '.workspace-columns'))->toContain('flex-wrap: nowrap')
         ->and(panelStubDeclarations($media, '.docs-body'))->toContain('flex-wrap: nowrap');
 });
 
@@ -437,4 +437,147 @@ it('keeps the reader markup', function (): void {
         ->and(preg_match('/\sclass="reader"/', $open))->toBe(1)
         ->and(preg_match('/<div\b[^>]*\sclass="reader-bar"/', $article))->toBe(1)
         ->and(preg_match('/<div\b[^>]*\sdata-reader-content\b/', $article))->toBe(1);
+});
+
+it('sets the agent state in the head script and not in the html markup', function (): void {
+    /** @var TestCase $this */
+    $content = panelStubWithDocuments($this);
+    $html = panelStubTag($content, '/<html\b[^>]*>/');
+    $head = panelStubTag($content, '/<head\b[^>]*>.*?<\/head>/s');
+    $script = panelStubTag($head, '/<script\b[^>]*>(?:(?!<\/script>).)*ba-panel-agent(?:(?!<\/script>).)*<\/script>/s');
+
+    expect($html)->not->toBe('')
+        ->and(preg_match('/\sdata-agent\b/', $html))->toBe(0)
+        ->and($script)->not->toBe('')
+        ->and(preg_match("/localStorage\.getItem\(\s*'ba-panel-agent'\s*\)/", $script))->toBe(1)
+        ->and(preg_match("/dataset\.agent\s*=\s*agent\s*===\s*'open'\s*\?\s*'open'\s*:\s*'closed'\s*;/", $script))->toBe(1);
+});
+
+it('places the rail inside the workspace after the columns', function (): void {
+    /** @var TestCase $this */
+    $content = panelStubWithDocuments($this);
+    $workspace = strpos($content, '<main class="workspace">');
+    $columns = strpos($content, 'class="workspace-columns"');
+    $rail = strpos($content, '<nav class="rail" aria-label="Panels">');
+    $mainEnd = strpos($content, '</main>');
+
+    expect($workspace)->not->toBeFalse()
+        ->and($columns)->not->toBeFalse()
+        ->and($rail)->not->toBeFalse()
+        ->and($mainEnd)->not->toBeFalse()
+        ->and($workspace < $columns)->toBeTrue()
+        ->and($columns < $rail)->toBeTrue()
+        ->and($rail < $mainEnd)->toBeTrue();
+});
+
+it('places a collapsed toggle button for the agent panel in the rail', function (): void {
+    /** @var TestCase $this */
+    $content = panelStubWithDocuments($this);
+    $rail = panelStubTag($content, '/<nav class="rail"[^>]*>.*?<\/nav>/s');
+    $button = panelStubTag($rail, '/<button\b[^>]*\bdata-agent-toggle\b[^>]*>/');
+
+    expect($button)->not->toBe('')
+        ->and($button)->toContain('aria-label="Feasibility agent"')
+        ->and($button)->toContain('title="Show or hide the feasibility agent"')
+        ->and($button)->toContain('aria-controls="agent-panel"')
+        ->and($button)->toContain('aria-expanded="false"');
+});
+
+it('hides the agent panel by default', function (): void {
+    /** @var TestCase $this */
+    $content = panelStubWithDocuments($this);
+    $section = panelStubTag($content, '/<section\b[^>]*\bid="agent-panel"[^>]*>/');
+
+    expect($section)->not->toBe('')
+        ->and(preg_match('/\sclass="agent"/', $section))->toBe(1)
+        ->and(preg_match('/\sdata-agent-panel\b/', $section))->toBe(1)
+        ->and(preg_match('/\shidden[\s>]/', $section))->toBe(1);
+});
+
+it('has no close button and no open button for the agent panel', function (): void {
+    /** @var TestCase $this */
+    $content = panelStubWithDocuments($this);
+    $css = panelStubStyle($content);
+
+    expect($content)->not->toContain('data-agent-close')
+        ->and($content)->not->toContain('data-agent-open')
+        ->and(preg_match('/\.agent-close\b[^{}]*\{/', $css))->toBe(0);
+});
+
+it('shows the stored open agent panel and hides the closed agent panel before the first paint', function (): void {
+    /** @var TestCase $this */
+    $css = panelStubTopLevel(panelStubStyle(panelStubWithDocuments($this)));
+
+    expect(panelStubDeclarations($css, ':root[data-agent="open"] .agent[hidden]'))->toContain('display: flex !important')
+        ->and(panelStubDeclarations($css, ':root[data-agent="closed"] .agent'))->toContain('display: none');
+});
+
+it('marks the expanded rail button with the accent color', function (): void {
+    /** @var TestCase $this */
+    $css = panelStubTopLevel(panelStubStyle(panelStubWithDocuments($this)));
+    $hasAccent = static fn (string $item): bool => str_contains($item, 'var(--color-accent)');
+    $expanded = array_filter(panelStubDeclarations($css, '.rail .rail-button[aria-expanded="true"]'), $hasAccent);
+    $open = array_filter(panelStubDeclarations($css, ':root[data-agent="open"] .rail .rail-button'), $hasAccent);
+
+    expect($expanded)->not->toBeEmpty()
+        ->and($open)->not->toBeEmpty();
+});
+
+it('toggles the agent panel from the rail button', function (): void {
+    /** @var TestCase $this */
+    $content = panelStubWithDocuments($this);
+    $script = panelStubTag($content, '/<script\b[^>]*>(?:(?!<\/script>).)*data-agent-toggle(?:(?!<\/script>).)*<\/script>/s');
+
+    expect($script)->not->toBe('')
+        ->and(preg_match("/querySelector\(\s*'\[data-agent-toggle\]'\s*\)/", $script))->toBe(1)
+        ->and(preg_match("/panel\.hidden\s*\?\s*'open'\s*:\s*'closed'/", $script))->toBe(1)
+        ->and(preg_match("/dispatchEvent\(\s*new\s+CustomEvent\(\s*'ba-panel:layout'\s*\)\s*\)/", $script))->toBe(1)
+        ->and(preg_match("/querySelector\(\s*'#agent-message'\s*\)/", $script))->toBe(1)
+        ->and(preg_match("/next\s*===\s*'open'[^)]*\)\s*\{\s*input\.focus\(\)/", $script))->toBe(1);
+});
+
+it('keeps the rail footer sticky at the bottom', function (): void {
+    /** @var TestCase $this */
+    $css = panelStubTopLevel(panelStubStyle(panelStubWithDocuments($this)));
+
+    expect(panelStubDeclarations($css, '.rail-footer'))->toContain('position: sticky')
+        ->toContain('bottom: 0');
+});
+
+it('hides the reader before the first selection', function (): void {
+    /** @var TestCase $this */
+    $content = panelStubWithDocuments($this);
+    $article = panelStubTag($content, '/<article\b[^>]*\bdata-reader\b[^>]*>.*?<\/article>/s');
+    $open = panelStubTag($article, '/<article\b[^>]*>/');
+
+    expect($open)->not->toBe('')
+        ->and(preg_match('/\shidden[\s>]/', $open))->toBe(1)
+        ->and(preg_match('/<div\b[^>]*\sdata-reader-content\b[^>]*>\s*<\/div>/', $article))->toBe(1)
+        ->and($content)->not->toContain('Select a node in the graph to read the document.');
+});
+
+it('shows the reader when a document opens and hides it when the reader closes', function (): void {
+    /** @var TestCase $this */
+    $content = panelStubWithDocuments($this);
+    $open = panelStubTag($content, '/function\s+openDocument\s*\(.*?(?=\n\s*function\s)/s');
+    $close = panelStubTag($content, '/function\s+closeReader\s*\(.*?(?=\n\s*function\s)/s');
+    $render = panelStubTag($content, '/function\s+renderDocument\s*\(.*?(?=\n\s*function\s)/s');
+
+    expect($open)->not->toBe('')
+        ->and(preg_match('/\breader\.hidden\s*=\s*false\s*;/', $open))->toBe(1)
+        ->and($open)->toContain("showReaderMessage('Loading the document…')")
+        ->and($close)->not->toBe('')
+        ->and(preg_match('/\breader\.hidden\s*=\s*true\s*;/', $close))->toBe(1)
+        ->and($render)->not->toBe('')
+        ->and(preg_match('/\breader\.scrollTop\s*=\s*0\s*;/', $render))->toBe(1);
+});
+
+it('resizes the graph through a resize observer', function (): void {
+    /** @var TestCase $this */
+    $content = panelStubWithDocuments($this);
+    $script = panelStubTag($content, '/<script\b[^>]*>(?:(?!<\/script>).)*?var data = .*?<\/script>/s');
+
+    expect($script)->not->toBe('')
+        ->and(preg_match('/\bfunction\s+resize\s*\(/', $script))->toBe(1)
+        ->and(preg_match('/new\s+ResizeObserver\s*\(\s*resize\s*\)/', $script))->toBe(1);
 });
