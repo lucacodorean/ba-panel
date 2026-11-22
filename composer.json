@@ -14,7 +14,9 @@
         "illuminate/routing": "^13.5",
         "illuminate/support": "^13.5",
         "illuminate/view": "^13.5",
-        "neuron-core/neuron-ai": "^4.1"
+        "league/commonmark": "^2.8",
+        "neuron-core/neuron-ai": "^4.1",
+        "symfony/yaml": "^7.4|^8.0"
     },
     "require-dev": {
         "orchestra/testbench": "^11.3",
