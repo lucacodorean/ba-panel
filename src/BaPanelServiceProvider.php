@@ -9,6 +9,7 @@ use Illuminate\Support\ServiceProvider;
 use Lucacodorean\BaPanel\Ai\BaPanelAgent;
 use Lucacodorean\BaPanel\Ai\ProviderFactory;
 use Lucacodorean\BaPanel\Config\ConfigValidator;
+use Lucacodorean\BaPanel\Graph\GraphBuilder;
 
 final class BaPanelServiceProvider extends ServiceProvider
 {
@@ -31,6 +32,14 @@ final class BaPanelServiceProvider extends ServiceProvider
             $ai = config('ba-panel.ai');
 
             return new BaPanelAgent($app->make(ProviderFactory::class)->fromConfig(is_array($ai) ? $ai : []));
+        });
+
+        // The builder reads the docs paths when a class asks for it. The scan runs only on build().
+        $this->app->bind(GraphBuilder::class, static function (): GraphBuilder {
+            $docs = config('ba-panel.docs');
+            $paths = is_array($docs) ? array_values(array_filter($docs, is_string(...))) : [];
+
+            return new GraphBuilder($paths, base_path());
         });
     }
 
