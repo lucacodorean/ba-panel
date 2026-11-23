@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Ai\BaPanelAgent;
+use Lucacodorean\BaPanel\Ai\FeasibilityAgent;
 use Lucacodorean\BaPanel\Ai\ProviderFactory;
 use Lucacodorean\BaPanel\Exceptions\InvalidConfigurationException;
 use Lucacodorean\BaPanel\Tests\Support\PanelConfig;
@@ -29,9 +29,9 @@ it('resolves the agent with the configured provider', function (string $provider
             'model' => 'model-test',
         ]))->rebootApplication();
 
-        $agent = app(BaPanelAgent::class);
+        $agent = app(FeasibilityAgent::class);
 
-        expect($agent)->toBeInstanceOf(BaPanelAgent::class)
+        expect($agent)->toBeInstanceOf(FeasibilityAgent::class)
             ->and($agent->getProvider())->toBeInstanceOf($class)
             ->and($agent->getProvider()->getModel())->toBe('model-test');
     } finally {
@@ -48,12 +48,12 @@ it('resolves the agent with the configured provider', function (string $provider
 
 it('throws when it resolves the agent with an empty AI config', function (): void {
     expect(config('ba-panel.enabled'))->toBeFalse()
-        ->and(fn () => app(BaPanelAgent::class))->toThrow(InvalidConfigurationException::class);
+        ->and(fn () => app(FeasibilityAgent::class))->toThrow(InvalidConfigurationException::class);
 });
 
 it('reports every missing AI value when it resolves the agent', function (): void {
     try {
-        app(BaPanelAgent::class);
+        app(FeasibilityAgent::class);
         throw new LogicException('Expected InvalidConfigurationException.');
     } catch (InvalidConfigurationException $exception) {
         expect($exception->errors())->toBe([
@@ -69,7 +69,7 @@ it('does not build the agent on boot when disabled', function (): void {
     $this->withBaPanelConfig(PanelConfig::disabled())->rebootApplication();
 
     expect(app()->isBooted())->toBeTrue()
-        ->and(app()->resolved(BaPanelAgent::class))->toBeFalse();
+        ->and(app()->resolved(FeasibilityAgent::class))->toBeFalse();
 });
 
 it('builds a new agent on each resolve', function (): void {
@@ -79,7 +79,7 @@ it('builds a new agent on each resolve', function (): void {
     try {
         $this->withBaPanelConfig(PanelConfig::enabled($fs->directory('docs')))->rebootApplication();
 
-        expect(app(BaPanelAgent::class))->not->toBe(app(BaPanelAgent::class));
+        expect(app(FeasibilityAgent::class))->not->toBe(app(FeasibilityAgent::class));
     } finally {
         $fs->cleanup();
     }

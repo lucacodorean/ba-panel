@@ -109,3 +109,33 @@ it('returns an empty string when the path is a directory', function (): void {
 
     expect((new DocumentRenderer)->render(new Node('0123456789ab', 'docs', 'Docs', 'docs', $directory)))->toBe('');
 });
+
+it('returns the markdown body without the front matter', function (): void {
+    $path = (rendererFixtures() ?? throw new RuntimeException('No temporary filesystem.'))
+        ->file('docs/doc.md', "---\ntitle: Secret title\n---\n# Body\n\nText <b>raw</b>.\n");
+
+    $body = (new DocumentRenderer)->body(new Node('0123456789ab', 'doc', 'Doc', 'docs/doc.md', $path));
+
+    expect($body)->toBeString()
+        ->and($body)->toContain("# Body\n\nText <b>raw</b>.")
+        ->and($body)->not->toContain('Secret title')
+        ->and($body)->not->toContain('---');
+});
+
+it('returns the full contents as the body when there is no front matter', function (): void {
+    $path = (rendererFixtures() ?? throw new RuntimeException('No temporary filesystem.'))->file('docs/doc.md', "# Only body\n");
+
+    expect((new DocumentRenderer)->body(new Node('0123456789ab', 'doc', 'Doc', 'docs/doc.md', $path)))->toBe("# Only body\n");
+});
+
+it('returns null as the body when the file is missing', function (): void {
+    $node = new Node('0123456789ab', 'missing', 'Missing', 'missing.md', '/does/not/exist/missing.md');
+
+    expect((new DocumentRenderer)->body($node))->toBeNull();
+});
+
+it('returns null as the body when the path is a directory', function (): void {
+    $directory = (rendererFixtures() ?? throw new RuntimeException('No temporary filesystem.'))->directory('docs');
+
+    expect((new DocumentRenderer)->body(new Node('0123456789ab', 'docs', 'Docs', 'docs', $directory)))->toBeNull();
+});

@@ -6,7 +6,7 @@ namespace Lucacodorean\BaPanel;
 
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\ServiceProvider;
-use Lucacodorean\BaPanel\Ai\BaPanelAgent;
+use Lucacodorean\BaPanel\Ai\FeasibilityAgent;
 use Lucacodorean\BaPanel\Ai\ProviderFactory;
 use Lucacodorean\BaPanel\Config\ConfigValidator;
 use Lucacodorean\BaPanel\Graph\GraphBuilder;
@@ -28,10 +28,11 @@ final class BaPanelServiceProvider extends ServiceProvider
         // The bindings are lazy. The container builds nothing until a class asks for the agent.
         $this->app->singleton(ProviderFactory::class);
 
-        $this->app->bind(BaPanelAgent::class, static function (Container $app): BaPanelAgent {
+        // Each request gets a new agent. The agent keeps no history between requests.
+        $this->app->bind(FeasibilityAgent::class, static function (Container $app): FeasibilityAgent {
             $ai = config('ba-panel.ai');
 
-            return new BaPanelAgent($app->make(ProviderFactory::class)->fromConfig(is_array($ai) ? $ai : []));
+            return new FeasibilityAgent($app->make(ProviderFactory::class)->fromConfig(is_array($ai) ? $ai : []));
         });
 
         // The builder reads the docs paths when a class asks for it. The scan runs only on build().

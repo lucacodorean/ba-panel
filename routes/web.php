@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Lucacodorean\BaPanel\Http\Controllers\FeasibilityController;
 use Lucacodorean\BaPanel\Http\Controllers\PanelController;
 
 /*
@@ -19,4 +20,8 @@ Route::middleware('web')->group(static function (): void {
 
     Route::get('/ba-panel/search', [PanelController::class, 'search'])
         ->name('ba-panel.search');
+
+    // The request gives node ids only. The controller finds each file through the graph.
+    Route::post('/ba-panel/feasibility', [FeasibilityController::class, 'assess'])
+        ->name('ba-panel.feasibility');
 });

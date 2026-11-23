@@ -4,35 +4,17 @@ declare(strict_types=1);
 
 namespace Lucacodorean\BaPanel\Graph;
 
-use League\CommonMark\Environment\Environment;
-use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
-use League\CommonMark\Extension\Table\TableExtension;
-use League\CommonMark\MarkdownConverter;
+use Lucacodorean\BaPanel\Markdown\SafeMarkdownConverter;
 
 /**
  * Render the Markdown document of a node as HTML.
  */
 final class DocumentRenderer
 {
-    /**
-     * Escape raw HTML. Remove unsafe links, for example "javascript:".
-     *
-     * @var array{html_input: string, allow_unsafe_links: bool}
-     */
-    private const array CONVERTER_CONFIG = [
-        'html_input' => 'escape',
-        'allow_unsafe_links' => false,
-    ];
-
-    private readonly MarkdownConverter $converter;
-
-    public function __construct(private readonly FrontMatterParser $frontMatter = new FrontMatterParser())
-    {
-        $environment = new Environment(self::CONVERTER_CONFIG);
-        $environment->addExtension(new CommonMarkCoreExtension());
-        $environment->addExtension(new TableExtension());
-
-        $this->converter = new MarkdownConverter($environment);
+    public function __construct(
+        private readonly FrontMatterParser $frontMatter = new FrontMatterParser(),
+        private readonly SafeMarkdownConverter $converter = new SafeMarkdownConverter(),
+    ) {
     }
 
     /**
@@ -41,14 +23,23 @@ final class DocumentRenderer
      */
     public function render(Node $node): string
     {
+        $body = $this->body($node);
+
+        return $body === null ? '' : $this->converter->convert($body);
+    }
+
+    /**
+     * Return the Markdown body of the document without the front matter.
+     * The file is read only from the node path. Return null when the file cannot be read.
+     */
+    public function body(Node $node): ?string
+    {
         $contents = is_file($node->absolutePath) ? @file_get_contents($node->absolutePath) : false;
 
         if ($contents === false) {
-            return '';
+            return null;
         }
 
-        $body = $this->frontMatter->parse($contents)['body'];
-
-        return $this->converter->convert($body)->getContent();
+        return $this->frontMatter->parse($contents)['body'];
     }
 }

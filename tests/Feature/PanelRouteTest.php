@@ -125,8 +125,29 @@ it('disables the send and export buttons', function (): void {
     $content = (string) $this->get('/ba-panel')->assertOk()->getContent();
 
     expect(preg_match('/<button[^>]*class="[^"]*send-button[^"]*"[^>]*\sdisabled[\s>]/', $content))->toBe(1)
-        ->and(preg_match_all('/<button[^>]*class="[^"]*export-button[^"]*"[^>]*\sdisabled[\s>]/', $content))->toBe(2)
-        ->and(preg_match_all('/<button[^>]*class="[^"]*export-button[^"]*"/', $content))->toBe(2);
+        ->and(preg_match_all('/<button[^>]*class="[^"]*export-button[^"]*"[^>]*\sdisabled[\s>]/', $content))->toBe(1)
+        ->and(preg_match_all('/<button[^>]*class="[^"]*export-button[^"]*"/', $content))->toBe(1);
+});
+
+it('has one Markdown export button and no PDF export', function (): void {
+    /** @var TestCase $this */
+    bootEnabledPanel($this);
+
+    $content = (string) $this->get('/ba-panel')->assertOk()->getContent();
+
+    expect(preg_match('/<button[^>]*class="[^"]*export-button[^"]*"[^>]*\sdata-export-md[\s>]/', $content))->toBe(1)
+        ->and($content)->toContain('.md</span>')
+        ->and($content)->not->toContain('data-export-pdf')
+        ->and($content)->not->toContain('.pdf');
+});
+
+it('has the CSRF token meta tag', function (): void {
+    /** @var TestCase $this */
+    bootEnabledPanel($this);
+
+    $content = (string) $this->get('/ba-panel')->assertOk()->getContent();
+
+    expect(preg_match('/<meta name="csrf-token" content="[^"]+">/', $content))->toBe(1);
 });
 
 /**

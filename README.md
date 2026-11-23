@@ -82,11 +82,12 @@ BAP_DOCS_ARRAY="docs, README.md"
 
 ## Routes
 
-| method | URI                          | route name           | middleware | response                                             |
-|--------|------------------------------|----------------------|------------|------------------------------------------------------|
-| `GET`  | `/ba-panel`                  | `ba-panel`           | `web`      | The panel view `ba-panel::panel`, with the graph.    |
-| `GET`  | `/ba-panel/documents/{node}` | `ba-panel.documents` | `web`      | JSON: the rendered document and its relations.       |
-| `GET`  | `/ba-panel/search?q=`        | `ba-panel.search`    | `web`      | JSON: the documents whose name matches the query.    |
+| method | URI                          | route name             | middleware | response                                             |
+|--------|------------------------------|------------------------|------------|------------------------------------------------------|
+| `GET`  | `/ba-panel`                  | `ba-panel`             | `web`      | The panel view `ba-panel::panel`, with the graph.    |
+| `GET`  | `/ba-panel/documents/{node}` | `ba-panel.documents`   | `web`      | JSON: the rendered document and its relations.       |
+| `GET`  | `/ba-panel/search?q=`        | `ba-panel.search`      | `web`      | JSON: the documents whose name matches the query.    |
+| `POST` | `/ba-panel/feasibility`      | `ba-panel.feasibility` | `web`      | JSON: the feasibility report of the request.         |
 
 - The package registers the routes only when `BAP_ENABLED` is `true`.
 - When `BAP_ENABLED` is `false`, the routes do not exist. A request gets a 404 response.
@@ -96,7 +97,8 @@ BAP_DOCS_ARRAY="docs, README.md"
 - `subgraph` lists the ids of the opened document and of its direct neighbours. A neighbour has a link with the opened document in either direction: outgoing, incoming, or bidirectional. Links are not followed further. Each document is listed once, sorted by path.
 - `ba-panel.search` returns `{query, threshold, results: [{id, name, path, score}]}`.
 - The search trims `q` and cuts it to 200 characters. A blank `q` returns no results.
-- The panel page uses relative URLs for the document and search requests. The panel works behind an HTTPS reverse proxy, for example the ddev router.
+- The panel page uses relative URLs for the document, search, and feasibility requests. The panel works behind an HTTPS reverse proxy, for example the ddev router.
+- For `ba-panel.feasibility`, see [Feasibility agent](#feasibility-agent).
 
 Use the route name to create a link:
 
@@ -192,11 +194,139 @@ Invalid YAML gives no metadata. The package does not throw an exception. The tit
   - Click the button again to close the panel. The focus stays on the button.
   - When the panel is closed, the documentation section uses the free width.
   - The browser stores the state in `localStorage`, with the key `ba-panel-agent` and the value `open` or `closed`. A missing or invalid value gives the closed state. The panel applies the stored state before the first paint.
+  - For the agent context, the request, and the report export, see [Feasibility agent](#feasibility-agent).
 
 The rendered Markdown escapes raw HTML. It removes unsafe links, for example `javascript:` links.
 
 For the reasons behind the graph, see [ADR 0003](docs/adr/0003-build-documentation-graph-from-front-matter-relations.md).
 For the reasons behind the filter, see [ADR 0004](docs/adr/0004-filter-documents-with-local-name-search.md).
+
+## Feasibility agent
+
+The feasibility agent assesses one change request or one feature request against the documentation files of the context. The result is a feasibility report in Markdown.
+
+- The agent class is `Lucacodorean\BaPanel\Ai\FeasibilityAgent`. It replaces `BaPanelAgent`.
+- The container builds a new agent on each resolve. It uses the `ba-panel.ai` configuration (`BAP_AI_PROVIDER`, `BAP_AI_MODEL`, `BAP_AI_KEY`) through `ProviderFactory`.
+- The context window of the agent is 150 000 tokens.
+- The agent uses only the documentation files of the request. When the files do not give a piece of information, the report says "Not specified in the documentation". The report then adds an open question.
+
+### Use the agent in the panel
+
+1. Click a node to open a document. The agent context is then that document and all files with a direct link to it. The direction of the link is not important.
+2. The panel shows each context file as a chip above the message field. Click the remove button of a chip to remove that file from the context.
+3. Type the request in the message field. Press Enter to send it. Press Shift+Enter for a new line.
+4. The panel shows the report in the conversation.
+5. Click the `.md` export button to download the latest report. The file name is `feasibility-<report_id>.md`.
+
+- When you open another document, the panel replaces the context with the files of that document.
+- When you close the reader, the panel clears the context.
+- The context can contain at most 50 files. The message can contain at most 5000 characters.
+- The `.md` export button is disabled until the panel receives a report.
+- The panel has no PDF export.
+- The agent keeps no history. Each request is a new conversation. A follow-up request must repeat the details of the earlier request.
+
+### Use the agent in PHP
+
+`FeasibilityAssessor::assess()` runs the agent and returns a `FeasibilityReport`. The files are graph nodes.
+
+```php
+use Lucacodorean\BaPanel\Ai\FeasibilityAgent;
+use Lucacodorean\BaPanel\Ai\FeasibilityAssessor;
+use Lucacodorean\BaPanel\Graph\GraphBuilder;
+
+$graph = app(GraphBuilder::class)->build();
+$files = array_values(array_filter([$graph->node('0123456789ab')]));
+
+$report = app(FeasibilityAssessor::class)->assess(
+    app(FeasibilityAgent::class),
+    'Add single sign-on to the client portal.',
+    $files,
+);
+
+$markdown = $report->toMarkdown();
+$data = $report->toArray();
+```
+
+- `assess()` sets a new random thread id on the agent. The model does not see earlier requests.
+- The user message has one block for each file, without the front matter. The request is the last block.
+- The container throws `InvalidConfigurationException` when the AI provider is not configured.
+
+### Endpoint `POST /ba-panel/feasibility`
+
+The request and the response are JSON. The request needs the CSRF token of the `web` middleware, for example in the `X-CSRF-TOKEN` header.
+
+Request:
+
+```json
+{
+    "message": "Add single sign-on to the client portal.",
+    "context": ["0123456789ab", "ba9876543210"]
+}
+```
+
+| field     | type             | rules                                                                                |
+|-----------|------------------|--------------------------------------------------------------------------------------|
+| `message` | string           | Required. The server trims it. At most 5000 characters.                              |
+| `context` | list of strings  | Optional. Default: empty list. At most 50 items. Each item is a node id: 12 lowercase hexadecimal characters. |
+
+- The server finds each node id only in the documentation graph. It does not read a path from the request.
+- The server uses a repeated id one time. It keeps the order of the ids.
+- An empty context is valid. The report then says that the documentation gives no information.
+
+Responses:
+
+| status | body                             | cause                                                         |
+|--------|----------------------------------|---------------------------------------------------------------|
+| `200`  | `{report, markdown, html}`       | The agent created the report.                                 |
+| `422`  | `{message}`                      | The message or the context is not valid. An id is unknown.    |
+| `503`  | `{message}`                      | The AI provider is not configured.                            |
+| `502`  | `{message}`                      | The agent or the AI provider failed.                          |
+
+- `report` is the report as an array with snake_case keys. `report.metadata.report_id` is the report id.
+- `markdown` is the report as Markdown.
+- `html` is the Markdown as HTML. The converter escapes raw HTML. It removes unsafe links.
+- The `422` message tells the user what to correct.
+- The `502` and `503` messages do not contain the exception details. The package logs the exception with `report()`.
+
+### Report contents
+
+`Lucacodorean\BaPanel\Reports\FeasibilityReport` is the structured output of the agent. Its fields follow the stub `prompts/feasibility.md`.
+
+- The report has 11 sections: metadata, request summary, scope, technical analysis, non-functional impact, effort estimation, risk assessment, technical debt, feasibility verdict, open questions, and references.
+- The fixed values are backed enums in `src/Reports/Enums`, for example `OverallVerdict` and `Priority`.
+- PHP fills the system fields in `ReportMetadata`. The model does not see these fields.
+
+| field               | value                                                        |
+|---------------------|--------------------------------------------------------------|
+| `report_id`         | `FR-YYYYMMDD-xxxxxx`. `xxxxxx` is 6 random hexadecimal characters. |
+| `report_version`    | `1.0`                                                        |
+| `report_status`     | `draft`                                                      |
+| `author`            | `Feasibility agent`                                          |
+| `created_at`, `updated_at`, `generated_at` | The time of the report, in ISO-8601 format.    |
+| `generator_name`    | `ba-panel`                                                   |
+| `generator_version` | The installed package version, or `dev`.                     |
+
+- PHP calculates the severity of each risk: probability multiplied by impact. The result is from 1 to 25.
+- PHP calculates the total effort: the sum of the task estimates, in hours.
+
+### Override the report view
+
+`FeasibilityReport::toMarkdown()` renders the Blade view `ba-panel::reports.feasibility`. The view makes Markdown, not HTML.
+
+1. Publish the views.
+
+   ```bash
+   php artisan vendor:publish --tag=ba-panel-views
+   ```
+
+2. Edit `resources/views/vendor/ba-panel/reports/feasibility.blade.php` in your application.
+
+- The view receives `$report` (`FeasibilityReport`) and `$metadata` (`ReportMetadata`).
+- Send each value through `Lucacodorean\BaPanel\Reports\MarkdownText`. Use `cell()` in a table cell, `cellList()` for a list in a table cell, `inline()` on one line, `text()` for a block, and `bullets()` for a list.
+- Use raw echoes (`{!! !!}`). The `MarkdownText` methods prepare the value for Markdown.
+- When the report fields change in a later version, update your published view.
+
+For the reasons behind the agent integration, see [ADR 0005](docs/adr/0005-integrate-feasibility-agent-through-json-endpoint-with-structured-report.md).
 
 ## Validation
 
