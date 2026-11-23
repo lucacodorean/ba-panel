@@ -10,24 +10,31 @@ use NeuronAI\StructuredOutput\Validation\Rules\NotBlank;
 /**
  * A change to an entity or a table of the data model.
  */
-final class DataModelChange
+final readonly class DataModelChange
 {
-    #[SchemaProperty(description: 'The name of the entity or the table.')]
-    #[NotBlank]
-    public string $entity;
+    /**
+     * The Neuron deserializer sets the properties through reflection. It does not call this constructor.
+     * Code that builds the object directly gives all values here.
+     */
+    public function __construct(
+        #[SchemaProperty(description: 'The name of the entity or the table.')]
+        #[NotBlank]
+        public string $entity,
 
-    #[SchemaProperty(description: 'The change to the entity or the table, for example "add column status".')]
-    #[NotBlank]
-    public string $change;
+        #[SchemaProperty(description: 'The change to the entity or the table, for example "add column status".')]
+        #[NotBlank]
+        public string $change,
 
-    #[SchemaProperty(description: 'True when the change needs a database migration.')]
-    public bool $migrationRequired;
+        #[SchemaProperty(description: 'True when the change needs a database migration.')]
+        public bool $migrationRequired,
 
-    #[SchemaProperty(description: 'True when the change can be rolled back without data loss.')]
-    public bool $reversible;
+        #[SchemaProperty(description: 'True when the change can be rolled back without data loss.')]
+        public bool $reversible,
 
-    #[SchemaProperty(description: 'True when existing data must be filled in for the change.')]
-    public bool $dataBackfill;
+        #[SchemaProperty(description: 'True when existing data must be filled in for the change.')]
+        public bool $dataBackfill,
+    ) {
+    }
 
     /**
      * @return array{entity: string, change: string, migration_required: bool, reversible: bool, data_backfill: bool}

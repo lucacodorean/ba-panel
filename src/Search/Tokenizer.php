@@ -7,7 +7,7 @@ namespace Lucacodorean\BaPanel\Search;
 /**
  * Split a file name or a query into lowercase tokens.
  */
-final class Tokenizer
+final readonly class Tokenizer
 {
     /**
      * Match a camelCase boundary, for example "dataModel" or "APIClient".

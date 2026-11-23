@@ -9,7 +9,7 @@ use BackedEnum;
 /**
  * Format report values for the Markdown report view.
  */
-final class MarkdownText
+final readonly class MarkdownText
 {
     public const string NOT_SPECIFIED = 'Not specified';
 

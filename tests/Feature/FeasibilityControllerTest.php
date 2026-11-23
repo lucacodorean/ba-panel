@@ -2,12 +2,15 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Config\Repository;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
-use Lucacodorean\BaPanel\Ai\FeasibilityAgent;
+use Lucacodorean\BaPanel\Ai\FeasibilityAgentFactory;
+use Lucacodorean\BaPanel\Ai\ProviderFactory;
 use Lucacodorean\BaPanel\Exceptions\InvalidConfigurationException;
 use Lucacodorean\BaPanel\Http\Controllers\FeasibilityController;
+use Lucacodorean\BaPanel\Tests\Support\FakeFeasibilityAgentFactory;
 use Lucacodorean\BaPanel\Tests\Support\FeasibilityReportFixture;
 use Lucacodorean\BaPanel\Tests\Support\PanelConfig;
 use Lucacodorean\BaPanel\Tests\Support\TemporaryFilesystem;
@@ -20,7 +23,7 @@ use NeuronAI\Testing\FakeAIProvider;
 use NeuronAI\Testing\RequestRecord;
 
 /*
-| These tests bind one fake provider in the container. They never send a request to a real AI provider.
+| These tests bind a fake agent factory with one fake provider in the container. They never send a request to a real AI provider.
 */
 
 const FEASIBILITY_URL = '/ba-panel/feasibility';
@@ -59,14 +62,33 @@ function bootFeasibilityPanel(TestCase $test): void
 
     // The fake handler records the reported exceptions. It does not write a log file.
     Exceptions::fake();
+
+    // The default provider has no responses. A test that does not bind a provider gets a 502, never a real request.
+    bindFeasibilityProvider($test, new FakeAIProvider);
 }
 
 /**
- * Bind the fake provider in the container. Each resolve of the agent returns a new agent with the same provider.
+ * Remove the fake agent factory. The container then builds the real factory from the "ba-panel.ai" config.
+ * Use this only with a missing or unsupported provider. The real factory then throws before any HTTP request.
  */
-function bindFeasibilityProvider(FakeAIProvider $provider): FakeAIProvider
+function useRealFeasibilityAgentFactory(TestCase $test): void
 {
-    app()->bind(FeasibilityAgent::class, static fn (): FeasibilityAgent => new FeasibilityAgent($provider));
+    $test->application()->forgetInstance(FeasibilityAgentFactory::class);
+}
+
+/**
+ * Replace the agent factory with a fake factory. The fake factory builds each agent with the fake provider.
+ * The controller uses the factory, so no request can reach a real AI provider.
+ */
+function bindFeasibilityProvider(TestCase $test, FakeAIProvider $provider): FakeAIProvider
+{
+    $app = $test->application();
+
+    $app->instance(FeasibilityAgentFactory::class, new FakeFeasibilityAgentFactory(
+        $app->make(ProviderFactory::class),
+        $app->make(Repository::class),
+        $provider,
+    ));
 
     return $provider;
 }
@@ -154,7 +176,7 @@ it('refuses a GET request', function (): void {
 it('returns the report, the Markdown and the HTML', function (): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
-    bindFeasibilityProvider(new FakeAIProvider(FeasibilityReportFixture::message()));
+    bindFeasibilityProvider($this, new FakeAIProvider(FeasibilityReportFixture::message()));
 
     $response = postFeasibility($this, ['message' => 'Add a CSV export.', 'context' => [feasibilityNodeId('docs/invoices.md')]])
         ->assertOk()
@@ -177,7 +199,7 @@ it('returns the report, the Markdown and the HTML', function (): void {
 it('sends the request and the file contents to the provider in one structured request', function (): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
-    $provider = bindFeasibilityProvider(new FakeAIProvider(FeasibilityReportFixture::message()));
+    $provider = bindFeasibilityProvider($this, new FakeAIProvider(FeasibilityReportFixture::message()));
 
     postFeasibility($this, [
         'message' => '  Add a CSV export.  ',
@@ -203,7 +225,7 @@ it('sends the request and the file contents to the provider in one structured re
 it('keeps the order of the context ids', function (): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
-    $provider = bindFeasibilityProvider(new FakeAIProvider(FeasibilityReportFixture::message()));
+    $provider = bindFeasibilityProvider($this, new FakeAIProvider(FeasibilityReportFixture::message()));
 
     postFeasibility($this, [
         'message' => 'Request.',
@@ -220,7 +242,7 @@ it('keeps the order of the context ids', function (): void {
 it('uses a repeated context id once', function (): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
-    $provider = bindFeasibilityProvider(new FakeAIProvider(FeasibilityReportFixture::message()));
+    $provider = bindFeasibilityProvider($this, new FakeAIProvider(FeasibilityReportFixture::message()));
     $id = feasibilityNodeId('docs/invoices.md');
 
     postFeasibility($this, ['message' => 'Request.', 'context' => [$id, $id, $id]])->assertOk();
@@ -232,7 +254,7 @@ it('uses a repeated context id once', function (): void {
 it('accepts the maximum number of context ids', function (): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
-    bindFeasibilityProvider(new FakeAIProvider(FeasibilityReportFixture::message()));
+    bindFeasibilityProvider($this, new FakeAIProvider(FeasibilityReportFixture::message()));
 
     $context = array_fill(0, FeasibilityController::MAX_CONTEXT_FILES, feasibilityNodeId('docs/billing.md'));
 
@@ -242,7 +264,7 @@ it('accepts the maximum number of context ids', function (): void {
 it('accepts a message with the maximum length', function (): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
-    bindFeasibilityProvider(new FakeAIProvider(FeasibilityReportFixture::message()));
+    bindFeasibilityProvider($this, new FakeAIProvider(FeasibilityReportFixture::message()));
 
     postFeasibility($this, ['message' => str_repeat('é', FeasibilityController::MAX_MESSAGE_LENGTH), 'context' => []])->assertOk();
 });
@@ -250,7 +272,7 @@ it('accepts a message with the maximum length', function (): void {
 it('accepts an empty or missing context', function (array $payload): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
-    $provider = bindFeasibilityProvider(new FakeAIProvider(FeasibilityReportFixture::message()));
+    $provider = bindFeasibilityProvider($this, new FakeAIProvider(FeasibilityReportFixture::message()));
 
     postFeasibility($this, $payload)->assertOk();
 
@@ -266,7 +288,7 @@ it('accepts an empty or missing context', function (array $payload): void {
 it('creates a new agent and new metadata for each request', function (): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
-    $provider = bindFeasibilityProvider(new FakeAIProvider(FeasibilityReportFixture::message(), FeasibilityReportFixture::message()));
+    $provider = bindFeasibilityProvider($this, new FakeAIProvider(FeasibilityReportFixture::message(), FeasibilityReportFixture::message()));
 
     $first = postFeasibility($this, ['message' => 'Request.'])->assertOk()->json('report.metadata.report_id');
     $second = postFeasibility($this, ['message' => 'Request.'])->assertOk()->json('report.metadata.report_id');
@@ -278,7 +300,7 @@ it('creates a new agent and new metadata for each request', function (): void {
 it('escapes raw HTML of the report in the HTML response', function (): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
-    bindFeasibilityProvider(new FakeAIProvider(FeasibilityReportFixture::message(FeasibilityReportFixture::data([
+    bindFeasibilityProvider($this, new FakeAIProvider(FeasibilityReportFixture::message(FeasibilityReportFixture::data([
         'recommendation' => 'Run <script>alert(1)</script> now.',
         'references' => ['[link](javascript:alert(1))'],
     ]))));
@@ -294,7 +316,7 @@ it('escapes raw HTML of the report in the HTML response', function (): void {
 it('refuses an invalid request with 422', function (array $payload, string $message): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
-    $provider = bindFeasibilityProvider(new FakeAIProvider(FeasibilityReportFixture::message()));
+    $provider = bindFeasibilityProvider($this, new FakeAIProvider(FeasibilityReportFixture::message()));
 
     postFeasibility($this, $payload)
         ->assertUnprocessable()
@@ -326,7 +348,7 @@ it('refuses an invalid request with 422', function (array $payload, string $mess
 it('refuses an unknown id after a known id', function (): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
-    $provider = bindFeasibilityProvider(new FakeAIProvider(FeasibilityReportFixture::message()));
+    $provider = bindFeasibilityProvider($this, new FakeAIProvider(FeasibilityReportFixture::message()));
 
     postFeasibility($this, ['message' => 'Request.', 'context' => [feasibilityNodeId('docs/invoices.md'), 'ffffffffffff']])
         ->assertUnprocessable()
@@ -338,7 +360,8 @@ it('refuses an unknown id after a known id', function (): void {
 it('returns 503 when the AI provider is not configured', function (): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
-    config()->set('ba-panel.ai', ['provider' => null, 'model' => null, 'key' => null]);
+    useRealFeasibilityAgentFactory($this);
+    $this->application()->make(Repository::class)->set('ba-panel.ai', ['provider' => null, 'model' => null, 'key' => null]);
 
     postFeasibility($this, ['message' => 'Request.'])
         ->assertServiceUnavailable()
@@ -350,7 +373,8 @@ it('returns 503 when the AI provider is not configured', function (): void {
 it('returns 503 when the AI provider is not supported', function (): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
-    config()->set('ba-panel.ai.provider', 'unknown-provider');
+    useRealFeasibilityAgentFactory($this);
+    $this->application()->make(Repository::class)->set('ba-panel.ai.provider', 'unknown-provider');
 
     postFeasibility($this, ['message' => 'Request.'])
         ->assertServiceUnavailable()
@@ -360,7 +384,8 @@ it('returns 503 when the AI provider is not supported', function (): void {
 it('validates the request before it builds the agent', function (): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
-    config()->set('ba-panel.ai', ['provider' => null, 'model' => null, 'key' => null]);
+    useRealFeasibilityAgentFactory($this);
+    $this->application()->make(Repository::class)->set('ba-panel.ai', ['provider' => null, 'model' => null, 'key' => null]);
 
     postFeasibility($this, ['message' => ''])->assertUnprocessable();
 });
@@ -368,7 +393,7 @@ it('validates the request before it builds the agent', function (): void {
 it('returns 502 when the provider has no response', function (): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
-    bindFeasibilityProvider(new FakeAIProvider);
+    bindFeasibilityProvider($this, new FakeAIProvider);
 
     $response = postFeasibility($this, ['message' => 'Request.'])
         ->assertStatus(502)
@@ -381,7 +406,7 @@ it('returns 502 when the provider has no response', function (): void {
 it('returns 502 when the provider does not return valid JSON', function (): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
-    $provider = bindFeasibilityProvider(new FakeAIProvider(new AssistantMessage('not json'), new AssistantMessage('still not json')));
+    $provider = bindFeasibilityProvider($this, new FakeAIProvider(new AssistantMessage('not json'), new AssistantMessage('still not json')));
 
     postFeasibility($this, ['message' => 'Request.'])
         ->assertStatus(502)
@@ -394,7 +419,7 @@ it('returns 502 when the report is not valid', function (): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
     $invalid = FeasibilityReportFixture::message(FeasibilityReportFixture::data(['requestTitle' => '']));
-    bindFeasibilityProvider(new FakeAIProvider($invalid, clone $invalid));
+    bindFeasibilityProvider($this, new FakeAIProvider($invalid, clone $invalid));
 
     postFeasibility($this, ['message' => 'Request.'])
         ->assertStatus(502)
@@ -404,7 +429,7 @@ it('returns 502 when the report is not valid', function (): void {
 it('returns a valid report after one invalid response', function (): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
-    $provider = bindFeasibilityProvider(new FakeAIProvider(new AssistantMessage('not json'), FeasibilityReportFixture::message()));
+    $provider = bindFeasibilityProvider($this, new FakeAIProvider(new AssistantMessage('not json'), FeasibilityReportFixture::message()));
 
     postFeasibility($this, ['message' => 'Request.'])->assertOk();
 
@@ -414,7 +439,7 @@ it('returns a valid report after one invalid response', function (): void {
 it('does not send the provider error details in the response', function (): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
-    bindFeasibilityProvider(new class extends FakeAIProvider
+    bindFeasibilityProvider($this, new class extends FakeAIProvider
     {
         /**
          * @param  Message|Message[]  $messages

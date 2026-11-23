@@ -10,23 +10,30 @@ use NeuronAI\StructuredOutput\Validation\Rules\NotBlank;
 /**
  * An approach that the analysis considered for the request.
  */
-final class Alternative
+final readonly class Alternative
 {
-    #[SchemaProperty(description: 'A short name and description of the approach.')]
-    #[NotBlank]
-    public string $approach;
+    /**
+     * The Neuron deserializer sets the properties through reflection. It does not call this constructor.
+     * Code that builds the object directly gives all values here.
+     */
+    public function __construct(
+        #[SchemaProperty(description: 'A short name and description of the approach.')]
+        #[NotBlank]
+        public string $approach,
 
-    #[SchemaProperty(description: 'The advantages of the approach. Use one sentence or a short comma-separated list.')]
-    public string $pros;
+        #[SchemaProperty(description: 'The advantages of the approach. Use one sentence or a short comma-separated list.')]
+        public string $pros,
 
-    #[SchemaProperty(description: 'The disadvantages of the approach. Use one sentence or a short comma-separated list.')]
-    public string $cons;
+        #[SchemaProperty(description: 'The disadvantages of the approach. Use one sentence or a short comma-separated list.')]
+        public string $cons,
 
-    #[SchemaProperty(description: 'The relative effort of the approach, for example "2-3 days" or "high". Write "Not specified" when the documentation does not support an estimate.')]
-    public string $effort;
+        #[SchemaProperty(description: 'The relative effort of the approach, for example "2-3 days" or "high". Write "Not specified" when the documentation does not support an estimate.')]
+        public string $effort,
 
-    #[SchemaProperty(description: 'True for the approach that the proposed solution uses. Select at most one approach.')]
-    public bool $selected;
+        #[SchemaProperty(description: 'True for the approach that the proposed solution uses. Select at most one approach.')]
+        public bool $selected,
+    ) {
+    }
 
     /**
      * @return array{approach: string, pros: string, cons: string, effort: string, selected: bool}

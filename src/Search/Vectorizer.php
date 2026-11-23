@@ -7,7 +7,7 @@ namespace Lucacodorean\BaPanel\Search;
 /**
  * Convert a token into a character trigram vector. Compare two vectors.
  */
-final class Vectorizer
+final readonly class Vectorizer
 {
     private const int GRAM_SIZE = 3;
 

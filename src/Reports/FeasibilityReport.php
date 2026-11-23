@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Lucacodorean\BaPanel\Reports;
 
+use Illuminate\Contracts\View\Factory as ViewFactory;
+use LogicException;
 use Lucacodorean\BaPanel\Reports\Enums\Complexity;
 use Lucacodorean\BaPanel\Reports\Enums\Confidence;
 use Lucacodorean\BaPanel\Reports\Enums\OverallVerdict;
@@ -23,6 +25,8 @@ use NeuronAI\StructuredOutput\Validation\Rules\NotBlank;
 final class FeasibilityReport
 {
     public const string VIEW = 'ba-panel::reports.feasibility';
+
+    private const string METADATA_MISSING = 'The report has no metadata. Call attachMetadata() first.';
 
     private const string NOT_SPECIFIED_HINT = ' Write "Not specified in the documentation" when the documentation does not give this information.';
 
@@ -327,11 +331,13 @@ final class FeasibilityReport
     }
 
     /**
-     * Return the system fields. Create the metadata of a new draft report when no metadata is set.
+     * Return the system fields. The metadata must be set with attachMetadata() first.
+     *
+     * @throws LogicException When no metadata is set.
      */
     public function metadata(): ReportMetadata
     {
-        return $this->metadata ??= ReportMetadata::create();
+        return $this->metadata ?? throw new LogicException(self::METADATA_MISSING);
     }
 
     /**
@@ -345,10 +351,13 @@ final class FeasibilityReport
     /**
      * Return the report as Markdown. The Blade view "ba-panel::reports.feasibility" makes the text.
      * The text has no blank lines at the start and ends with one line break.
+     * The caller gives the view factory. The agent deserializes the report, so the report cannot get services in the constructor.
+     *
+     * @throws LogicException When no metadata is set.
      */
-    public function toMarkdown(): string
+    public function toMarkdown(ViewFactory $views): string
     {
-        return trim(view(self::VIEW, ['report' => $this, 'metadata' => $this->metadata()])->render())."\n";
+        return trim($views->make(self::VIEW, ['report' => $this, 'metadata' => $this->metadata()])->render())."\n";
     }
 
     /**

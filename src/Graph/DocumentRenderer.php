@@ -9,11 +9,11 @@ use Lucacodorean\BaPanel\Markdown\SafeMarkdownConverter;
 /**
  * Render the Markdown document of a node as HTML.
  */
-final class DocumentRenderer
+final readonly class DocumentRenderer
 {
     public function __construct(
-        private readonly FrontMatterParser $frontMatter = new FrontMatterParser(),
-        private readonly SafeMarkdownConverter $converter = new SafeMarkdownConverter(),
+        private FrontMatterParser $frontMatter,
+        private SafeMarkdownConverter $converter,
     ) {
     }
 

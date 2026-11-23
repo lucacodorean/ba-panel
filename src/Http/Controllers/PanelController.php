@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Lucacodorean\BaPanel\Http\Controllers;
 
+use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 /**
  * Serve the panel page, the documents, and the name search.
  */
-final class PanelController
+final readonly class PanelController
 {
     private const string VIEW = 'ba-panel::panel';
 
@@ -31,9 +32,9 @@ final class PanelController
     /**
      * Show the panel with the documentation graph.
      */
-    public function index(GraphBuilder $builder): View
+    public function index(GraphBuilder $builder, ViewFactory $views): View
     {
-        return view(self::VIEW, ['graph' => $builder->build()->toArray()]);
+        return $views->make(self::VIEW, ['graph' => $builder->build()->toArray()]);
     }
 
     /**

@@ -9,7 +9,7 @@ use Lucacodorean\BaPanel\Graph\Graph;
 /**
  * Search the graph nodes by name. Compare tokens as character trigram vectors.
  */
-final class NameSearch
+final readonly class NameSearch
 {
     /**
      * The minimum score for a result.
@@ -19,9 +19,9 @@ final class NameSearch
     private const float FULL_MATCH = 1.0;
 
     public function __construct(
-        private readonly float $threshold = self::THRESHOLD,
-        private readonly Tokenizer $tokenizer = new Tokenizer(),
-        private readonly Vectorizer $vectorizer = new Vectorizer(),
+        private Tokenizer $tokenizer,
+        private Vectorizer $vectorizer,
+        private float $threshold = self::THRESHOLD,
     ) {
     }
 

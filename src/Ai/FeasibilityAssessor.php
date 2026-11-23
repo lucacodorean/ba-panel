@@ -7,7 +7,7 @@ namespace Lucacodorean\BaPanel\Ai;
 use Lucacodorean\BaPanel\Graph\DocumentRenderer;
 use Lucacodorean\BaPanel\Graph\Node;
 use Lucacodorean\BaPanel\Reports\FeasibilityReport;
-use Lucacodorean\BaPanel\Reports\ReportMetadata;
+use Lucacodorean\BaPanel\Reports\ReportMetadataFactory;
 use NeuronAI\Agent\AgentInterface;
 use NeuronAI\Chat\Messages\ContentBlocks\TextContent;
 use NeuronAI\Chat\Messages\UserMessage;
@@ -16,7 +16,7 @@ use UnexpectedValueException;
 /**
  * Run the feasibility agent on a request and the documentation files of the context.
  */
-final class FeasibilityAssessor
+final readonly class FeasibilityAssessor
 {
     /**
      * The number of random bytes in a thread id. Each assessment has a new thread, so no history is kept.
@@ -41,8 +41,10 @@ final class FeasibilityAssessor
 
     private const string UNEXPECTED_OUTPUT = 'The agent did not return a feasibility report.';
 
-    public function __construct(private readonly DocumentRenderer $documents = new DocumentRenderer())
-    {
+    public function __construct(
+        private DocumentRenderer $documents,
+        private ReportMetadataFactory $metadata,
+    ) {
     }
 
     /**
@@ -62,7 +64,7 @@ final class FeasibilityAssessor
             throw new UnexpectedValueException(self::UNEXPECTED_OUTPUT);
         }
 
-        return $report->attachMetadata(ReportMetadata::create());
+        return $report->attachMetadata($this->metadata->create());
     }
 
     /**

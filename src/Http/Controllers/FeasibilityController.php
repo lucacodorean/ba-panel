@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Lucacodorean\BaPanel\Http\Controllers;
 
-use Illuminate\Contracts\Container\Container;
+use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Lucacodorean\BaPanel\Ai\FeasibilityAgent;
+use Lucacodorean\BaPanel\Ai\FeasibilityAgentFactory;
 use Lucacodorean\BaPanel\Ai\FeasibilityAssessor;
 use Lucacodorean\BaPanel\Exceptions\InvalidConfigurationException;
 use Lucacodorean\BaPanel\Exceptions\InvalidFeasibilityRequestException;
@@ -21,7 +22,7 @@ use Throwable;
 /**
  * Assess a request with the feasibility agent. The request and the response are JSON.
  */
-final class FeasibilityController
+final readonly class FeasibilityController
 {
     /**
      * Longer messages are refused.
@@ -67,10 +68,12 @@ final class FeasibilityController
      */
     public function assess(
         Request $request,
-        Container $container,
         GraphBuilder $builder,
+        FeasibilityAgentFactory $agents,
         FeasibilityAssessor $assessor,
         SafeMarkdownConverter $converter,
+        ViewFactory $views,
+        ExceptionHandler $exceptions,
     ): JsonResponse {
         try {
             $message = $this->message($request->input(self::INPUT_MESSAGE));
@@ -81,18 +84,18 @@ final class FeasibilityController
 
         // The response does not include the exception details. The details can contain provider data.
         try {
-            $report = $this->report($container, $assessor, $message, $files);
+            $report = $this->report($agents, $assessor, $message, $files);
         } catch (InvalidConfigurationException $exception) {
-            report($exception);
+            $exceptions->report($exception);
 
             return $this->error(self::AI_NOT_CONFIGURED, JsonResponse::HTTP_SERVICE_UNAVAILABLE);
         } catch (Throwable $exception) {
-            report($exception);
+            $exceptions->report($exception);
 
             return $this->error(self::AGENT_FAILED, JsonResponse::HTTP_BAD_GATEWAY);
         }
 
-        $markdown = $report->toMarkdown();
+        $markdown = $report->toMarkdown($views);
 
         return new JsonResponse([
             'report' => $report->toArray(),
@@ -102,17 +105,14 @@ final class FeasibilityController
     }
 
     /**
-     * Build the agent and run the assessment. The container builds the agent here, so a configuration error can be caught.
-     * The container throws InvalidConfigurationException when the AI provider is not configured.
+     * Build the agent and run the assessment. The factory builds the agent after the validation, so a configuration error can be caught.
+     * The factory throws InvalidConfigurationException when the AI provider is not configured.
      *
      * @param list<Node> $files
      */
-    private function report(Container $container, FeasibilityAssessor $assessor, string $message, array $files): FeasibilityReport
+    private function report(FeasibilityAgentFactory $agents, FeasibilityAssessor $assessor, string $message, array $files): FeasibilityReport
     {
-        /** @var FeasibilityAgent $agent */
-        $agent = $container->make(FeasibilityAgent::class);
-
-        return $assessor->assess($agent, $message, $files);
+        return $assessor->assess($agents->make(), $message, $files);
     }
 
     private function error(string $message, int $status): JsonResponse

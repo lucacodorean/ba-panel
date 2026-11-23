@@ -7,7 +7,7 @@ namespace Lucacodorean\BaPanel\Config;
 use Lucacodorean\BaPanel\Ai\ProviderFactory;
 use Lucacodorean\BaPanel\Exceptions\InvalidConfigurationException;
 
-final class ConfigValidator
+final readonly class ConfigValidator
 {
     private const string CONFIG_AI = 'ai';
 
@@ -62,7 +62,7 @@ final class ConfigValidator
         self::CONFIG_KEY => self::ENV_AI_KEY,
     ];
 
-    public function __construct(private readonly string $basePath)
+    public function __construct(private string $basePath)
     {
     }
 

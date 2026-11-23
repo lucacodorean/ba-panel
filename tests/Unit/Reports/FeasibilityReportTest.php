@@ -2,12 +2,24 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\View\Factory as ViewFactory;
 use Lucacodorean\BaPanel\Reports\Enums\OverallVerdict;
 use Lucacodorean\BaPanel\Reports\Enums\RequestType;
 use Lucacodorean\BaPanel\Reports\FeasibilityReport;
+use Lucacodorean\BaPanel\Reports\PackageVersion;
 use Lucacodorean\BaPanel\Reports\ReportMetadata;
+use Lucacodorean\BaPanel\Reports\ReportMetadataFactory;
 use Lucacodorean\BaPanel\Tests\Support\FeasibilityReportFixture;
+use Lucacodorean\BaPanel\Tests\TestCase;
 use NeuronAI\StructuredOutput\Validation\Validator;
+
+/**
+ * Create metadata at the fixed time 2026-11-23T10:15:30+00:00.
+ */
+function feasibilityReportMetadata(): ReportMetadata
+{
+    return (new ReportMetadataFactory(new PackageVersion))->create(new DateTimeImmutable('2026-11-23T10:15:30+00:00'));
+}
 
 /**
  * Return the fixture report with fixed metadata.
@@ -16,8 +28,15 @@ use NeuronAI\StructuredOutput\Validation\Validator;
  */
 function feasibilityReportWithMetadata(?array $data = null): FeasibilityReport
 {
-    return FeasibilityReportFixture::report($data)
-        ->attachMetadata(ReportMetadata::create(new DateTimeImmutable('2026-11-23T10:15:30+00:00')));
+    return FeasibilityReportFixture::report($data)->attachMetadata(feasibilityReportMetadata());
+}
+
+/**
+ * Return the view factory of the Testbench application. The package views are registered on boot.
+ */
+function feasibilityReportViews(TestCase $test): ViewFactory
+{
+    return $test->application()->make(ViewFactory::class);
 }
 
 /**
@@ -84,16 +103,25 @@ it('returns a total effort of zero when no task is given', function (): void {
     expect(FeasibilityReportFixture::report(FeasibilityReportFixture::emptyListsData())->effortTotalHours())->toBe(0.0);
 });
 
-it('creates draft metadata when no metadata is attached', function (): void {
-    $report = FeasibilityReportFixture::report();
+it('throws when it returns the metadata and no metadata is attached', function (): void {
+    expect(fn () => FeasibilityReportFixture::report()->metadata())
+        ->toThrow(LogicException::class, 'The report has no metadata. Call attachMetadata() first.');
+});
 
-    expect($report->metadata()->reportId)->toMatch('/^FR-\d{8}-[a-f0-9]{6}$/')
-        ->and($report->metadata())->toBe($report->metadata());
+it('throws when it returns the array and no metadata is attached', function (): void {
+    expect(fn () => FeasibilityReportFixture::report()->toArray())->toThrow(LogicException::class);
+});
+
+it('throws when it returns the Markdown and no metadata is attached', function (): void {
+    /** @var TestCase $this */
+    $views = feasibilityReportViews($this);
+
+    expect(fn () => FeasibilityReportFixture::report()->toMarkdown($views))->toThrow(LogicException::class);
 });
 
 it('returns the attached metadata', function (): void {
     $report = FeasibilityReportFixture::report();
-    $metadata = ReportMetadata::create();
+    $metadata = feasibilityReportMetadata();
 
     expect($report->attachMetadata($metadata))->toBe($report)
         ->and($report->metadata())->toBe($metadata);
@@ -105,7 +133,8 @@ it('does not read metadata from the model output', function (): void {
         'reportId' => 'FR-FAKE',
     ]));
 
-    expect($report->metadata()->reportId)->not->toBe('FR-FAKE');
+    // The model output gives no metadata. The report has metadata only after attachMetadata().
+    expect(fn () => $report->metadata())->toThrow(LogicException::class);
 });
 
 it('returns the report as an array with snake_case keys', function (): void {
@@ -164,7 +193,8 @@ it('returns the nested objects as arrays', function (): void {
 });
 
 it('starts the Markdown with the report title and ends with one line break', function (): void {
-    $markdown = feasibilityReportWithMetadata()->toMarkdown();
+    /** @var TestCase $this */
+    $markdown = feasibilityReportWithMetadata()->toMarkdown(feasibilityReportViews($this));
 
     expect($markdown)->toStartWith('# Feasibility Report: Export invoices as CSV')
         ->and($markdown)->toEndWith("</sub>\n")
@@ -172,7 +202,8 @@ it('starts the Markdown with the report title and ends with one line break', fun
 });
 
 it('replaces every placeholder in the Markdown', function (): void {
-    $markdown = feasibilityReportWithMetadata()->toMarkdown();
+    /** @var TestCase $this */
+    $markdown = feasibilityReportWithMetadata()->toMarkdown(feasibilityReportViews($this));
 
     expect($markdown)->not->toContain('{{')
         ->and($markdown)->not->toContain('}}')
@@ -185,7 +216,8 @@ it('replaces every placeholder in the Markdown', function (): void {
 });
 
 it('does not put comments in the Markdown', function (): void {
-    $markdown = feasibilityReportWithMetadata()->toMarkdown();
+    /** @var TestCase $this */
+    $markdown = feasibilityReportWithMetadata()->toMarkdown(feasibilityReportViews($this));
 
     expect($markdown)->not->toContain('<!--')
         ->and($markdown)->not->toContain('-->')
@@ -193,7 +225,8 @@ it('does not put comments in the Markdown', function (): void {
 });
 
 it('has the sections in order', function (): void {
-    $markdown = feasibilityReportWithMetadata()->toMarkdown();
+    /** @var TestCase $this */
+    $markdown = feasibilityReportWithMetadata()->toMarkdown(feasibilityReportViews($this));
     $headings = array_map(static fn (string $line): string => substr($line, 3), feasibilityReportLines($markdown, '## '));
 
     expect($headings)->toBe([
@@ -212,9 +245,10 @@ it('has the sections in order', function (): void {
 });
 
 it('shows the metadata values in the Markdown', function (): void {
+    /** @var TestCase $this */
     $report = feasibilityReportWithMetadata();
     $metadata = $report->metadata();
-    $markdown = $report->toMarkdown();
+    $markdown = $report->toMarkdown(feasibilityReportViews($this));
 
     expect($markdown)->toContain('| Report ID      | '.$metadata->reportId.' |')
         ->and($markdown)->toContain('| Report version | 1.0 |')
@@ -226,7 +260,8 @@ it('shows the metadata values in the Markdown', function (): void {
 });
 
 it('shows the report values in the Markdown', function (): void {
-    $markdown = feasibilityReportWithMetadata()->toMarkdown();
+    /** @var TestCase $this */
+    $markdown = feasibilityReportWithMetadata()->toMarkdown(feasibilityReportViews($this));
 
     expect($markdown)->toContain('| Request type   | feature_request |')
         ->and($markdown)->toContain('| Linked tickets | FIN-101, FIN-102 |')
@@ -243,22 +278,25 @@ it('shows the report values in the Markdown', function (): void {
 });
 
 it('shows the calculated severity in the risk table', function (): void {
-    $markdown = feasibilityReportWithMetadata()->toMarkdown();
+    /** @var TestCase $this */
+    $markdown = feasibilityReportWithMetadata()->toMarkdown(feasibilityReportViews($this));
 
     expect($markdown)->toContain('| R1 | Large exports time out. | 2 | 4 | 8 | Limit the rows. | Billing team |');
 });
 
 it('escapes the pipe character and removes line breaks in table cells', function (): void {
+    /** @var TestCase $this */
     $markdown = feasibilityReportWithMetadata(FeasibilityReportFixture::data([
         'risks' => [
             ['risk' => "Rows | columns\nbreak", 'probability' => 3, 'impact' => 3, 'mitigation' => 'a|b', 'owner' => 'Team'],
         ],
-    ]))->toMarkdown();
+    ]))->toMarkdown(feasibilityReportViews($this));
 
     expect($markdown)->toContain('| R1 | Rows \| columns break | 3 | 3 | 9 | a\|b | Team |');
 });
 
 it('keeps the same column count in each table row', function (): void {
+    /** @var TestCase $this */
     $data = FeasibilityReportFixture::data([
         'requester' => "Team | A\nB",
         'risks' => [
@@ -267,7 +305,7 @@ it('keeps the same column count in each table row', function (): void {
     ]);
 
     foreach ([$data, FeasibilityReportFixture::emptyListsData()] as $variant) {
-        $tables = feasibilityReportTables(feasibilityReportWithMetadata($variant)->toMarkdown());
+        $tables = feasibilityReportTables(feasibilityReportWithMetadata($variant)->toMarkdown(feasibilityReportViews($this)));
 
         expect($tables)->toHaveCount(12);
 
@@ -282,7 +320,8 @@ it('keeps the same column count in each table row', function (): void {
 });
 
 it('shows "- None" for each empty list', function (): void {
-    $markdown = feasibilityReportWithMetadata(FeasibilityReportFixture::emptyListsData())->toMarkdown();
+    /** @var TestCase $this */
+    $markdown = feasibilityReportWithMetadata(FeasibilityReportFixture::emptyListsData())->toMarkdown(feasibilityReportViews($this));
 
     expect($markdown)->toContain("### 2.5 Acceptance Criteria\n- None")
         ->and($markdown)->toContain("### 3.1 In Scope\n- None")
@@ -298,7 +337,8 @@ it('shows "- None" for each empty list', function (): void {
 });
 
 it('shows a "None" row for each empty table', function (): void {
-    $markdown = feasibilityReportWithMetadata(FeasibilityReportFixture::emptyListsData())->toMarkdown();
+    /** @var TestCase $this */
+    $markdown = feasibilityReportWithMetadata(FeasibilityReportFixture::emptyListsData())->toMarkdown(feasibilityReportViews($this));
 
     $lines = array_count_values(explode("\n", $markdown));
 
@@ -310,19 +350,22 @@ it('shows a "None" row for each empty table', function (): void {
 });
 
 it('shows "Not specified" for a missing story point estimate', function (): void {
-    $markdown = feasibilityReportWithMetadata(FeasibilityReportFixture::data(['storyPoints' => null]))->toMarkdown();
+    /** @var TestCase $this */
+    $markdown = feasibilityReportWithMetadata(FeasibilityReportFixture::data(['storyPoints' => null]))->toMarkdown(feasibilityReportViews($this));
 
     expect($markdown)->toContain('| Story points             | Not specified |');
 });
 
 it('shows the total effort of zero when no task is given', function (): void {
-    $markdown = feasibilityReportWithMetadata(FeasibilityReportFixture::emptyListsData())->toMarkdown();
+    /** @var TestCase $this */
+    $markdown = feasibilityReportWithMetadata(FeasibilityReportFixture::emptyListsData())->toMarkdown(feasibilityReportViews($this));
 
     expect($markdown)->toContain('| Total estimate           | 0 h |');
 });
 
 it('does not escape HTML in the Markdown', function (): void {
-    $markdown = feasibilityReportWithMetadata(FeasibilityReportFixture::data(['recommendation' => 'Use <b>care</b> & test.']))->toMarkdown();
+    /** @var TestCase $this */
+    $markdown = feasibilityReportWithMetadata(FeasibilityReportFixture::data(['recommendation' => 'Use <b>care</b> & test.']))->toMarkdown(feasibilityReportViews($this));
 
     expect($markdown)->toContain('Use <b>care</b> & test.')
         ->and($markdown)->not->toContain('&lt;b&gt;')

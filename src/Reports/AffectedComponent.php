@@ -13,23 +13,30 @@ use NeuronAI\StructuredOutput\Validation\Rules\NotBlank;
 /**
  * A component of the system that the request changes.
  */
-final class AffectedComponent
+final readonly class AffectedComponent
 {
-    #[SchemaProperty(description: 'The name of the component, as the documentation names it.')]
-    #[NotBlank]
-    public string $component;
+    /**
+     * The Neuron deserializer sets the properties through reflection. It does not call this constructor.
+     * Code that builds the object directly gives all values here.
+     */
+    public function __construct(
+        #[SchemaProperty(description: 'The name of the component, as the documentation names it.')]
+        #[NotBlank]
+        public string $component,
 
-    #[SchemaProperty(description: 'The architecture layer of the component.')]
-    public Layer $layer;
+        #[SchemaProperty(description: 'The architecture layer of the component.')]
+        public Layer $layer,
 
-    #[SchemaProperty(description: 'The type of change to the component.')]
-    public ChangeType $changeType;
+        #[SchemaProperty(description: 'The type of change to the component.')]
+        public ChangeType $changeType,
 
-    #[SchemaProperty(description: 'The impact of the change on the component.')]
-    public Impact $impact;
+        #[SchemaProperty(description: 'The impact of the change on the component.')]
+        public Impact $impact,
 
-    #[SchemaProperty(description: 'The team or person that owns the component. Write "Not specified" when the documentation does not name an owner.')]
-    public string $owner;
+        #[SchemaProperty(description: 'The team or person that owns the component. Write "Not specified" when the documentation does not name an owner.')]
+        public string $owner,
+    ) {
+    }
 
     /**
      * @return array{component: string, layer: string, change_type: string, impact: string, owner: string}

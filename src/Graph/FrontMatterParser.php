@@ -11,10 +11,13 @@ use League\CommonMark\Extension\FrontMatter\FrontMatterParser as CommonMarkFront
 /**
  * Split a Markdown document into the YAML front matter and the body.
  */
-final class FrontMatterParser
+final readonly class FrontMatterParser
 {
-    private readonly CommonMarkFrontMatterParser $parser;
+    private CommonMarkFrontMatterParser $parser;
 
+    /**
+     * The CommonMark parser is an internal part of this adapter. It has no config and no I/O, so it is not injected.
+     */
     public function __construct()
     {
         $this->parser = new CommonMarkFrontMatterParser(new SymfonyYamlFrontMatterParser());

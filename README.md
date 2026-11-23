@@ -206,7 +206,7 @@ For the reasons behind the filter, see [ADR 0004](docs/adr/0004-filter-documents
 The feasibility agent assesses one change request or one feature request against the documentation files of the context. The result is a feasibility report in Markdown.
 
 - The agent class is `Lucacodorean\BaPanel\Ai\FeasibilityAgent`. It replaces `BaPanelAgent`.
-- The container builds a new agent on each resolve. It uses the `ba-panel.ai` configuration (`BAP_AI_PROVIDER`, `BAP_AI_MODEL`, `BAP_AI_KEY`) through `ProviderFactory`.
+- The container builds a new agent on each resolve. `FeasibilityAgentFactory::make()` builds it from the `ba-panel.ai` configuration (`BAP_AI_PROVIDER`, `BAP_AI_MODEL`, `BAP_AI_KEY`) through `ProviderFactory`.
 - The context window of the agent is 150 000 tokens.
 - The agent uses only the documentation files of the request. When the files do not give a piece of information, the report says "Not specified in the documentation". The report then adds an open question.
 
@@ -229,27 +229,44 @@ The feasibility agent assesses one change request or one feature request against
 
 `FeasibilityAssessor::assess()` runs the agent and returns a `FeasibilityReport`. The files are graph nodes.
 
+The package classes get their services through dependency injection. Get them from the container, for example as constructor parameters of your class.
+
 ```php
-use Lucacodorean\BaPanel\Ai\FeasibilityAgent;
+use Illuminate\Contracts\View\Factory as ViewFactory;
+use Lucacodorean\BaPanel\Ai\FeasibilityAgentFactory;
 use Lucacodorean\BaPanel\Ai\FeasibilityAssessor;
 use Lucacodorean\BaPanel\Graph\GraphBuilder;
 
-$graph = app(GraphBuilder::class)->build();
-$files = array_values(array_filter([$graph->node('0123456789ab')]));
+final class AssessRequest
+{
+    public function __construct(
+        private readonly GraphBuilder $builder,
+        private readonly FeasibilityAgentFactory $agents,
+        private readonly FeasibilityAssessor $assessor,
+        private readonly ViewFactory $views,
+    ) {
+    }
 
-$report = app(FeasibilityAssessor::class)->assess(
-    app(FeasibilityAgent::class),
-    'Add single sign-on to the client portal.',
-    $files,
-);
+    public function __invoke(string $message): string
+    {
+        $graph = $this->builder->build();
+        $files = array_values(array_filter([$graph->node('0123456789ab')]));
 
-$markdown = $report->toMarkdown();
-$data = $report->toArray();
+        $report = $this->assessor->assess($this->agents->make(), $message, $files);
+
+        return $report->toMarkdown($this->views);
+    }
+}
 ```
 
 - `assess()` sets a new random thread id on the agent. The model does not see earlier requests.
 - The user message has one block for each file, without the front matter. The request is the last block.
-- The container throws `InvalidConfigurationException` when the AI provider is not configured.
+- `FeasibilityAgentFactory::make()` throws `InvalidConfigurationException` when the AI provider is not configured.
+- `toMarkdown()` needs the view factory as its argument. Neuron AI creates the report, so the report cannot get the view factory in its constructor.
+- `toArray()` returns the report as an array with snake_case keys.
+- `assess()` attaches the metadata to the report. `FeasibilityReport::metadata()` throws `LogicException` when no metadata is attached.
+- To use another AI provider in a test, extend `FeasibilityAgentFactory` and bind your class in the container. The class is not final.
+- `FeasibilityAgentFactory` is a `readonly class`. Declare your subclass as a `readonly class` too, for example `final readonly class MyAgentFactory extends FeasibilityAgentFactory`.
 
 ### Endpoint `POST /ba-panel/feasibility`
 
@@ -294,7 +311,21 @@ Responses:
 
 - The report has 11 sections: metadata, request summary, scope, technical analysis, non-functional impact, effort estimation, risk assessment, technical debt, feasibility verdict, open questions, and references.
 - The fixed values are backed enums in `src/Reports/Enums`, for example `OverallVerdict` and `Priority`.
-- PHP fills the system fields in `ReportMetadata`. The model does not see these fields.
+- PHP fills the system fields in `ReportMetadata`. The model does not see these fields. `ReportMetadataFactory::create()` creates them.
+- `FeasibilityAssessor` calls `create()`. The report dates are then the current system time.
+- To give a fixed time, for example in a test, call `create($now)` with a `DateTimeImmutable`.
+
+```php
+use Lucacodorean\BaPanel\Reports\ReportMetadataFactory;
+
+$factory = app(ReportMetadataFactory::class);
+
+// The current time.
+$metadata = $factory->create();
+
+// A fixed time.
+$metadata = $factory->create(new DateTimeImmutable('2026-11-23T10:15:30+00:00'));
+```
 
 | field               | value                                                        |
 |---------------------|--------------------------------------------------------------|
@@ -311,7 +342,7 @@ Responses:
 
 ### Override the report view
 
-`FeasibilityReport::toMarkdown()` renders the Blade view `ba-panel::reports.feasibility`. The view makes Markdown, not HTML.
+`FeasibilityReport::toMarkdown(ViewFactory $views)` renders the Blade view `ba-panel::reports.feasibility`. The view makes Markdown, not HTML.
 
 1. Publish the views.
 
@@ -327,6 +358,8 @@ Responses:
 - When the report fields change in a later version, update your published view.
 
 For the reasons behind the agent integration, see [ADR 0005](docs/adr/0005-integrate-feasibility-agent-through-json-endpoint-with-structured-report.md).
+For the reasons behind the dependency injection, see [ADR 0006](docs/adr/0006-inject-services-through-constructors-and-methods.md).
+For the reasons behind the `final` and `readonly` classes, see [ADR 0007](docs/adr/0007-declare-immutable-classes-readonly-and-leaf-classes-final.md).
 
 ## Validation
 

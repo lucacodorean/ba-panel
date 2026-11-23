@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 use Lucacodorean\BaPanel\Ai\FeasibilityAgent;
 use Lucacodorean\BaPanel\Ai\FeasibilityAssessor;
+use Lucacodorean\BaPanel\Graph\DocumentRenderer;
+use Lucacodorean\BaPanel\Graph\FrontMatterParser;
 use Lucacodorean\BaPanel\Graph\Node;
+use Lucacodorean\BaPanel\Markdown\SafeMarkdownConverter;
 use Lucacodorean\BaPanel\Reports\Enums\ReportStatus;
 use Lucacodorean\BaPanel\Reports\FeasibilityReport;
+use Lucacodorean\BaPanel\Reports\PackageVersion;
 use Lucacodorean\BaPanel\Reports\ReportMetadata;
+use Lucacodorean\BaPanel\Reports\ReportMetadataFactory;
 use Lucacodorean\BaPanel\Tests\Support\FeasibilityReportFixture;
 use Lucacodorean\BaPanel\Tests\Support\TemporaryFilesystem;
 use NeuronAI\Agent\AgentInterface;
@@ -36,6 +41,17 @@ function assessorFixtures(bool $cleanup = false): ?TemporaryFilesystem
     }
 
     return $fs ??= new TemporaryFilesystem;
+}
+
+/**
+ * Build the assessor with its real dependencies.
+ */
+function feasibilityAssessor(): FeasibilityAssessor
+{
+    return new FeasibilityAssessor(
+        new DocumentRenderer(new FrontMatterParser, new SafeMarkdownConverter),
+        new ReportMetadataFactory(new PackageVersion),
+    );
 }
 
 /**
@@ -72,7 +88,7 @@ it('puts the file count first and the request last', function (): void {
         assessorNode('bbbbbbbbbbbb', 'docs/two.md', 'Two', "# Two\n\nSecond body.\n"),
     ];
 
-    $blocks = assessorBlocks((new FeasibilityAssessor)->message('Add a CSV export.', $files));
+    $blocks = assessorBlocks(feasibilityAssessor()->message('Add a CSV export.', $files));
 
     expect($blocks)->toHaveCount(4)
         ->and($blocks[0])->toBe('Documentation files given as context: 2.')
@@ -85,7 +101,7 @@ it('adds one block per file in the given order', function (): void {
         assessorNode('bbbbbbbbbbbb', 'docs/two.md', 'Two title', "\n\n# Two\n\nSecond body.\n\n"),
     ];
 
-    $blocks = assessorBlocks((new FeasibilityAssessor)->message('Request.', $files));
+    $blocks = assessorBlocks(feasibilityAssessor()->message('Request.', $files));
 
     expect($blocks[1])->toBe("File: docs/one.md\nTitle: One title\n\n# One\n\nFirst body.")
         ->and($blocks[2])->toBe("File: docs/two.md\nTitle: Two title\n\n# Two\n\nSecond body.");
@@ -94,7 +110,7 @@ it('adds one block per file in the given order', function (): void {
 it('removes the front matter from each file', function (): void {
     $files = [assessorNode('aaaaaaaaaaaa', 'docs/one.md', 'One', "---\ntitle: Secret title\nrelations:\n  - other.md\n---\n# Body\n")];
 
-    $block = assessorBlocks((new FeasibilityAssessor)->message('Request.', $files))[1];
+    $block = assessorBlocks(feasibilityAssessor()->message('Request.', $files))[1];
 
     expect($block)->toBe("File: docs/one.md\nTitle: One\n\n# Body")
         ->and($block)->not->toContain('Secret title')
@@ -105,7 +121,7 @@ it('removes the front matter from each file', function (): void {
 it('does not send the absolute path of a file', function (): void {
     $node = assessorNode('aaaaaaaaaaaa', 'docs/one.md', 'One', '# One');
 
-    $content = (string) (new FeasibilityAssessor)->message('Request.', [$node])->getContent();
+    $content = (string) feasibilityAssessor()->message('Request.', [$node])->getContent();
 
     expect($content)->not->toContain($node->absolutePath);
 });
@@ -113,13 +129,13 @@ it('does not send the absolute path of a file', function (): void {
 it('marks a file that cannot be read', function (): void {
     $node = new Node('aaaaaaaaaaaa', 'gone', 'Gone', 'docs/gone.md', '/does/not/exist/gone.md');
 
-    $blocks = assessorBlocks((new FeasibilityAssessor)->message('Request.', [$node]));
+    $blocks = assessorBlocks(feasibilityAssessor()->message('Request.', [$node]));
 
     expect($blocks[1])->toBe("File: docs/gone.md\nTitle: Gone\n\nThe file could not be read.");
 });
 
 it('says that no files are given when the context is empty', function (): void {
-    $blocks = assessorBlocks((new FeasibilityAssessor)->message('Request.', []));
+    $blocks = assessorBlocks(feasibilityAssessor()->message('Request.', []));
 
     expect($blocks)->toBe([
         'No documentation files are given. Say that the documentation gives no information.',
@@ -128,27 +144,35 @@ it('says that no files are given when the context is empty', function (): void {
 });
 
 it('returns a user message', function (): void {
-    expect((new FeasibilityAssessor)->message('Request.', []))->toBeInstanceOf(UserMessage::class);
+    expect(feasibilityAssessor()->message('Request.', []))->toBeInstanceOf(UserMessage::class);
 });
 
 it('returns the report of the agent with new metadata', function (): void {
     $provider = new FakeAIProvider(FeasibilityReportFixture::message());
 
-    $report = (new FeasibilityAssessor)->assess(new FeasibilityAgent($provider), 'Add a CSV export.', []);
+    // The assessor uses the current time. The test compares it with times before and after the call.
+    // The ISO-8601 format has no fractions of a second. Thus the start is rounded down to the second.
+    $before = new DateTimeImmutable('@'.time());
+    $report = feasibilityAssessor()->assess(new FeasibilityAgent($provider), 'Add a CSV export.', []);
+    $after = new DateTimeImmutable;
     $metadata = $report->metadata();
+    $created = DateTimeImmutable::createFromFormat(DateTimeInterface::ATOM, $metadata->createdAt);
 
     expect($report)->toBeInstanceOf(FeasibilityReport::class)
         ->and($report->requestTitle)->toBe('Export invoices as CSV')
         ->and($metadata->reportId)->toMatch('/^FR-\d{8}-[a-f0-9]{6}$/')
         ->and($metadata->reportStatus)->toBe(ReportStatus::Draft)
-        ->and($metadata->author)->toBe(ReportMetadata::AUTHOR);
+        ->and($metadata->author)->toBe(ReportMetadata::AUTHOR)
+        ->and($created)->toBeInstanceOf(DateTimeImmutable::class)
+        ->and($created >= $before && $created <= $after)->toBeTrue()
+        ->and($metadata->generatedAt)->toBe($metadata->createdAt);
 });
 
 it('sends the built message to the provider in one structured request', function (): void {
     $provider = new FakeAIProvider(FeasibilityReportFixture::message());
     $files = [assessorNode('aaaaaaaaaaaa', 'docs/invoices.md', 'Invoices', "---\ntitle: Invoices\n---\n# Invoices\n\nThe invoice module.\n")];
 
-    (new FeasibilityAssessor)->assess(new FeasibilityAgent($provider), 'Add a CSV export.', $files);
+    feasibilityAssessor()->assess(new FeasibilityAgent($provider), 'Add a CSV export.', $files);
 
     $provider->assertMethodCallCount('structured', 1);
     $provider->assertSent(static function (RequestRecord $record): bool {
@@ -162,7 +186,7 @@ it('sends the built message to the provider in one structured request', function
 });
 
 it('sets a new random thread id on each agent', function (): void {
-    $assessor = new FeasibilityAssessor;
+    $assessor = feasibilityAssessor();
     $first = new FeasibilityAgent(new FakeAIProvider(FeasibilityReportFixture::message()));
     $second = new FeasibilityAgent(new FakeAIProvider(FeasibilityReportFixture::message()));
 
@@ -175,7 +199,7 @@ it('sets a new random thread id on each agent', function (): void {
 });
 
 it('creates new metadata for each report', function (): void {
-    $assessor = new FeasibilityAssessor;
+    $assessor = feasibilityAssessor();
 
     $first = $assessor->assess(new FeasibilityAgent(new FakeAIProvider(FeasibilityReportFixture::message())), 'Request.', []);
     $second = $assessor->assess(new FeasibilityAgent(new FakeAIProvider(FeasibilityReportFixture::message())), 'Request.', []);
@@ -189,7 +213,7 @@ it('throws when the agent does not return a feasibility report', function (): vo
     $agent->shouldReceive('setThreadId')->once()->andReturnSelf();
     $agent->shouldReceive('structured')->once()->andReturn(new stdClass);
 
-    expect(fn () => (new FeasibilityAssessor)->assess($agent, 'Request.', []))
+    expect(fn () => feasibilityAssessor()->assess($agent, 'Request.', []))
         ->toThrow(UnexpectedValueException::class, 'The agent did not return a feasibility report.');
 });
 
@@ -199,6 +223,6 @@ it('throws when the agent returns null', function (): void {
     $agent->shouldReceive('setThreadId')->once()->andReturnSelf();
     $agent->shouldReceive('structured')->once()->andReturnNull();
 
-    expect(fn () => (new FeasibilityAssessor)->assess($agent, 'Request.', []))
+    expect(fn () => feasibilityAssessor()->assess($agent, 'Request.', []))
         ->toThrow(UnexpectedValueException::class);
 });

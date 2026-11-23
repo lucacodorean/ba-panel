@@ -12,7 +12,7 @@ use League\CommonMark\MarkdownConverter;
 /**
  * Convert Markdown to HTML that is safe to show in the panel.
  */
-final class SafeMarkdownConverter
+final readonly class SafeMarkdownConverter
 {
     /**
      * Escape raw HTML. Remove unsafe links, for example "javascript:".
@@ -24,8 +24,11 @@ final class SafeMarkdownConverter
         'allow_unsafe_links' => false,
     ];
 
-    private readonly MarkdownConverter $converter;
+    private MarkdownConverter $converter;
 
+    /**
+     * The CommonMark converter is an internal part of this adapter. This class owns the safe settings, so the converter is not injected.
+     */
     public function __construct()
     {
         $environment = new Environment(self::CONVERTER_CONFIG);
