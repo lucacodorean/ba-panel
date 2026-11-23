@@ -7,7 +7,7 @@ namespace Lucacodorean\BaPanel\Graph;
 /**
  * Build the documentation graph from the configured paths.
  */
-final class GraphBuilder
+final readonly class GraphBuilder
 {
     private const string METADATA_TITLE = 'title';
 
@@ -39,9 +39,9 @@ final class GraphBuilder
      * @param list<string> $paths The configured files and directories.
      */
     public function __construct(
-        private readonly array $paths,
-        private readonly string $basePath,
-        private readonly FrontMatterParser $frontMatter = new FrontMatterParser(),
+        private array $paths,
+        private string $basePath,
+        private FrontMatterParser $frontMatter,
     ) {
     }
 

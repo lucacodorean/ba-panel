@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Lucacodorean\BaPanel\Graph\FrontMatterParser;
 use Lucacodorean\BaPanel\Graph\Graph;
 use Lucacodorean\BaPanel\Graph\GraphBuilder;
 use Lucacodorean\BaPanel\Graph\Node;
@@ -41,7 +42,7 @@ function graphFs(): TemporaryFilesystem
  */
 function buildGraph(array $paths, ?string $basePath = null): Graph
 {
-    return (new GraphBuilder($paths, $basePath ?? graphFs()->root()))->build();
+    return (new GraphBuilder($paths, $basePath ?? graphFs()->root(), new FrontMatterParser))->build();
 }
 
 /**

@@ -310,14 +310,50 @@ it('shows the reader empty state before the first selection', function (): void 
     expect($content)->toContain('data-reader-path>No file open</span>');
 });
 
-it('hides the context chip before a document is open', function (): void {
+it('hides the context before a document is open', function (): void {
     /** @var TestCase $this */
     $content = panelStubWithDocuments($this);
-    $chip = panelStubTag($content, '/<span[^>]*class="context-chip"[^>]*>/');
+    $context = panelStubTag($content, '/<div[^>]*class="context"[^>]*>/');
 
-    expect($chip)->not->toBe('')
-        ->and(preg_match('/\shidden[\s>]/', $chip))->toBe(1)
-        ->and($content)->toContain('<span data-context-name></span>');
+    expect($context)->toContain('data-context')
+        ->and(preg_match('/\shidden[\s>]/', $context))->toBe(1);
+});
+
+it('renders an empty context list without chips', function (): void {
+    /** @var TestCase $this */
+    $content = panelStubWithDocuments($this);
+    $list = panelStubTag($content, '/<ul[^>]*data-context-list[^>]*>/');
+
+    expect($list)->toContain('class="context-list"')
+        ->and($list)->toContain('aria-labelledby="context-label"')
+        ->and(preg_match('/<ul[^>]*data-context-list[^>]*><\/ul>/', $content))->toBe(1)
+        ->and($content)->not->toMatch('/<[a-z]+[^>]*class="context-chip"/')
+        ->and($content)->not->toContain('<span data-context-name></span>');
+});
+
+it('shows a file count of zero in the context label', function (): void {
+    /** @var TestCase $this */
+    $content = panelStubWithDocuments($this);
+
+    expect($content)->toContain('id="context-label"')
+        ->and($content)->toContain('<span data-context-count>0</span> <span data-context-unit>files</span>');
+});
+
+it('builds a context chip with a remove button for each file', function (): void {
+    /** @var TestCase $this */
+    $content = panelStubWithDocuments($this);
+
+    expect($content)->toContain("chip.className = 'context-chip';")
+        ->and($content)->toContain("remove.className = 'icon-button context-remove';")
+        ->and($content)->toContain("remove.setAttribute('aria-label', 'Remove ' + file.name + ' from context');");
+});
+
+it('sends the CSRF token and the context ids to the feasibility route', function (): void {
+    /** @var TestCase $this */
+    $content = panelStubWithDocuments($this);
+
+    expect($content)->toContain("headers['X-CSRF-TOKEN'] = csrfMeta.content;")
+        ->and($content)->toContain('var feasibilityUrl = '.Js::from(route('ba-panel.feasibility', [], false)).';');
 });
 
 it('connects the search input to the hidden results list', function (): void {
