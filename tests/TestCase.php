@@ -7,6 +7,7 @@ namespace Lucacodorean\BaPanel\Tests;
 use Illuminate\Foundation\Application;
 use Lucacodorean\BaPanel\BaPanelServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
+use RuntimeException;
 
 abstract class TestCase extends Orchestra
 {
@@ -35,6 +36,14 @@ abstract class TestCase extends Orchestra
     public function rebootApplication(): void
     {
         $this->refreshApplication();
+    }
+
+    /**
+     * Return the container of the current application. Test helpers use it to bind and resolve services.
+     */
+    public function application(): Application
+    {
+        return $this->app ?? throw new RuntimeException('The application is not created.');
     }
 
     /**

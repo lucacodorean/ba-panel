@@ -13,7 +13,7 @@ use NeuronAI\Providers\Mistral\Mistral;
 use NeuronAI\Providers\OpenAI\OpenAI;
 use NeuronAI\Providers\XAI\Grok;
 
-final class ProviderFactory
+final readonly class ProviderFactory
 {
     public const string ANTHROPIC = 'anthropic';
 

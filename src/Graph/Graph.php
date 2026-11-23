@@ -8,12 +8,12 @@ namespace Lucacodorean\BaPanel\Graph;
  * The documentation graph. Each node is a document. Each relationship is a directed link between two documents.
  * A relationship can be bidirectional. Then it can be followed from both ends.
  */
-final class Graph
+final readonly class Graph
 {
     /**
      * @var array<string, Node>
      */
-    private array $nodes = [];
+    private array $nodes;
 
     /**
      * @var list<Relationship>
@@ -26,10 +26,14 @@ final class Graph
      */
     public function __construct(array $nodes = [], array $relationships = [])
     {
+        // The class is readonly. Build the keyed list first, then set the property one time.
+        $keyed = [];
+
         foreach ($nodes as $node) {
-            $this->nodes[$node->id] = $node;
+            $keyed[$node->id] = $node;
         }
 
+        $this->nodes = $keyed;
         $this->relationships = $relationships;
     }
 

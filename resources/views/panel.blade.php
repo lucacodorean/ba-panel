@@ -9,6 +9,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Workspace · Documentation · Feasibility agent</title>
     <script>
         /* Apply the stored or system theme before the first paint. */
@@ -843,21 +844,19 @@
             opacity: 0.4;
         }
 
-        .export-button-primary {
-            color: var(--color-on-inverse);
-            background-color: var(--color-inverse);
-            border-color: var(--color-inverse);
-        }
-
+        /* The first item has an automatic top margin. The items stay at the bottom, and the top stays reachable by scroll. */
         .conversation {
             display: flex;
             flex: 1 1 auto;
             flex-direction: column;
-            justify-content: flex-end;
             gap: 16px;
             min-height: 0;
             padding: 20px;
             overflow: auto;
+        }
+
+        .conversation > :first-child {
+            margin-top: auto;
         }
 
         .message {
@@ -867,6 +866,38 @@
             gap: 10px;
             max-width: 90%;
             line-height: 1.6;
+        }
+
+        /* The text of the user keeps its line breaks. */
+        .message-user {
+            align-self: flex-end;
+            padding: 8px 12px;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            background-color: var(--color-accent-soft);
+            border-radius: 12px;
+        }
+
+        .message-report {
+            align-self: stretch;
+            max-width: 100%;
+            padding: 14px 16px;
+            background-color: var(--color-surface);
+            border: var(--border);
+            border-radius: 12px;
+        }
+
+        .message-status {
+            color: var(--color-muted);
+            font-size: 13px;
+        }
+
+        .message-error {
+            padding: 8px 12px;
+            font-size: 13px;
+            border: 1px solid var(--color-border-strong);
+            border-left: 3px solid var(--color-accent);
+            border-radius: 8px;
         }
 
         .suggestions {
@@ -908,9 +939,35 @@
             border-color: var(--color-accent);
         }
 
+        .context {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .context-label {
+            color: var(--color-muted);
+            font-size: 11.5px;
+        }
+
+        /* A large neighbourhood gives many files. The list scrolls inside a fixed height. */
+        .context-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-height: 92px;
+            margin: 0;
+            padding: 0;
+            overflow-y: auto;
+            list-style: none;
+            scrollbar-color: var(--color-scrollbar) transparent;
+            scrollbar-width: thin;
+        }
+
         .context-chip {
             align-self: flex-start;
             display: inline-flex;
+            max-width: 100%;
             align-items: center;
             gap: 6px;
             height: 26px;
@@ -921,7 +978,14 @@
             border-radius: 7px;
         }
 
+        .context-chip-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .context-remove {
+            flex-shrink: 0;
             width: 22px;
             height: 22px;
             color: var(--color-accent);
@@ -1074,27 +1138,21 @@
                     </div>
 
                     <div class="agent-actions">
-                        <button type="button" class="button export-button" disabled>
+                        <button type="button" class="button export-button" title="Download the latest report as Markdown" disabled data-export-md>
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
                                 <path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>
                             </svg>
                             <span><span class="sr-only">Export as </span>.md</span>
                         </button>
-                        <button type="button" class="button export-button export-button-primary" disabled>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-                                <path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>
-                            </svg>
-                            <span><span class="sr-only">Export as </span>.pdf</span>
-                        </button>
                     </div>
                 </div>
 
-                <div class="conversation" aria-live="polite">
+                <div class="conversation" aria-live="polite" data-conversation>
                     <div class="message">
-                        <p>Hi — describe what you’d like to build and I’ll assess its feasibility against the project documentation. Open a file on the left to add it as context.</p>
+                        <p>Hi — describe what you’d like to build and I’ll assess its feasibility against the project documentation. Open a file on the left to add it and its linked files as context.</p>
                     </div>
 
-                    <div class="suggestions">
+                    <div class="suggestions" data-suggestions>
                         <span class="suggestions-label">Try</span>
                         <button type="button" class="button suggestion">Assess the feasibility of a client portal with SSO</button>
                         <button type="button" class="button suggestion">What information do you need from me to start?</button>
@@ -1104,21 +1162,17 @@
 
                 <div class="composer">
                     <div class="composer-box">
-                        <span class="context-chip" data-context hidden>
-                            <span>Context: <span data-context-name></span></span>
-                            <button type="button" class="icon-button context-remove" aria-label="Remove the document from context" data-context-remove>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
-                                    <path d="M6 6l12 12M18 6 6 18"/>
-                                </svg>
-                            </button>
-                        </span>
+                        <div class="context" data-context hidden>
+                            <span id="context-label" class="context-label">Context · <span data-context-count>0</span> <span data-context-unit>files</span></span>
+                            <ul class="context-list" aria-labelledby="context-label" data-context-list></ul>
+                        </div>
 
                         <label class="sr-only" for="agent-message">Message the feasibility agent</label>
-                        <textarea id="agent-message" class="composer-input" name="message" rows="3" placeholder="Describe what you want to build…"></textarea>
+                        <textarea id="agent-message" class="composer-input" name="message" rows="3" maxlength="{{ \Lucacodorean\BaPanel\Http\Controllers\FeasibilityController::MAX_MESSAGE_LENGTH }}" placeholder="Describe what you want to build…" data-agent-input></textarea>
 
                         <div class="composer-footer">
                             <span class="composer-hint">Enter to send · Shift+Enter for a new line</span>
-                            <button type="button" class="button icon-button send-button" aria-label="Send message" disabled>
+                            <button type="button" class="button icon-button send-button" aria-label="Send message" disabled data-agent-send>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
                                     <path d="M12 19V5M5 12l7-7 7 7"/>
                                 </svg>
@@ -1285,9 +1339,6 @@
         var readerContent = document.querySelector('[data-reader-content]');
         var readerClose = document.querySelector('[data-reader-close]');
         var showAllButton = document.querySelector('[data-graph-show-all]');
-        var contextChip = document.querySelector('[data-context]');
-        var contextName = document.querySelector('[data-context-name]');
-        var contextRemove = document.querySelector('[data-context-remove]');
         var searchBox = document.querySelector('[data-search]');
         var searchInput = document.querySelector('[data-search-input]');
         var searchResults = document.querySelector('[data-search-results]');
@@ -1368,20 +1419,24 @@
             readerContent.appendChild(message);
         }
 
-        function setContext(name) {
-            if (!contextChip) {
-                return;
-            }
+        /*
+         * Send the context files to the agent panel. The files are the open node and the nodes connected to it.
+         * The open node is first. The other files keep the order of the subgraph. No id clears the context.
+         */
+        function setContext(id, subgraph) {
+            var files = [];
+            var seen = {};
 
-            contextChip.hidden = !name;
+            [id].concat(subgraph || []).forEach(function (item) {
+                var node = item ? nodesById[item] : null;
 
-            if (contextName) {
-                contextName.textContent = name || '';
-            }
+                if (node && !seen[node.id]) {
+                    seen[node.id] = true;
+                    files.push({ id: node.id, name: node.name, path: node.path });
+                }
+            });
 
-            if (contextRemove) {
-                contextRemove.setAttribute('aria-label', name ? 'Remove ' + name + ' from context' : 'Remove the document from context');
-            }
+            document.dispatchEvent(new CustomEvent('ba-panel:context', { detail: { files: files } }));
         }
 
         function select(id) {
@@ -1559,7 +1614,7 @@
 
             /* Show the top of the new document. */
             reader.scrollTop = 0;
-            setContext(doc.name);
+            setContext(doc.id, doc.subgraph);
         }
 
         function openDocument(id) {
@@ -1596,7 +1651,7 @@
                         readerPath.textContent = node ? node.path : 'Unknown file';
                         showReaderMessage('The document could not be loaded.');
                         reader.scrollTop = 0;
-                        setContext(null);
+                        setContext(null, []);
                         showFullGraph();
                         reader.removeAttribute('aria-busy');
                     }
@@ -1615,7 +1670,7 @@
             readerContent.textContent = '';
             reader.scrollTop = 0;
             select(null);
-            setContext(null);
+            setContext(null, []);
             showFullGraph();
             relayout();
 
@@ -1638,12 +1693,6 @@
                 if (node && node.element) {
                     node.element.focus();
                 }
-            });
-        }
-
-        if (contextRemove) {
-            contextRemove.addEventListener('click', function () {
-                setContext(null);
             });
         }
 
@@ -2163,6 +2212,306 @@
                 }
             });
         }
+    })();
+</script>
+<script>
+    /* Send the request and the context files to the feasibility agent. Show the report. Export the latest report as Markdown. */
+    (function () {
+        var feasibilityUrl = {{ \Illuminate\Support\Js::from(route('ba-panel.feasibility', [], false)) }};
+        var MAX_CONTEXT_FILES = {{ \Illuminate\Support\Js::from(\Lucacodorean\BaPanel\Http\Controllers\FeasibilityController::MAX_CONTEXT_FILES) }};
+        var MESSAGE_PENDING = 'Assessing feasibility…';
+        var MESSAGE_FAILED = 'The feasibility agent is not available. Try again later.';
+        var MESSAGE_TOO_MANY = 'The context has too many files. Remove files to keep at most ' + MAX_CONTEXT_FILES + '.';
+
+        var panel = document.querySelector('[data-agent-panel]');
+
+        if (!panel) {
+            return;
+        }
+
+        var conversation = panel.querySelector('[data-conversation]');
+        var suggestions = panel.querySelector('[data-suggestions]');
+        var input = panel.querySelector('[data-agent-input]');
+        var sendButton = panel.querySelector('[data-agent-send]');
+        var exportButton = panel.querySelector('[data-export-md]');
+        var contextBox = panel.querySelector('[data-context]');
+        var contextList = panel.querySelector('[data-context-list]');
+        var contextCount = panel.querySelector('[data-context-count]');
+        var contextUnit = panel.querySelector('[data-context-unit]');
+        var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+
+        if (!conversation || !input || !sendButton) {
+            return;
+        }
+
+        /* The context files. Each file is { id, name, path }. */
+        var contextFiles = [];
+        var busy = false;
+        var latestReport = null;
+
+        /* Context */
+
+        function renderContext() {
+            if (!contextBox || !contextList) {
+                return;
+            }
+
+            contextList.textContent = '';
+            contextBox.hidden = contextFiles.length === 0;
+
+            if (contextCount) {
+                contextCount.textContent = String(contextFiles.length);
+            }
+
+            if (contextUnit) {
+                contextUnit.textContent = contextFiles.length === 1 ? 'file' : 'files';
+            }
+
+            contextFiles.forEach(function (file) {
+                var item = document.createElement('li');
+                var chip = document.createElement('span');
+                var name = document.createElement('span');
+                var remove = document.createElement('button');
+
+                chip.className = 'context-chip';
+                chip.title = file.path;
+                name.className = 'context-chip-name';
+                name.textContent = file.name;
+
+                remove.type = 'button';
+                remove.className = 'icon-button context-remove';
+                remove.setAttribute('aria-label', 'Remove ' + file.name + ' from context');
+                remove.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+                remove.addEventListener('click', function () {
+                    removeContextFile(file.id);
+                });
+
+                chip.appendChild(name);
+                chip.appendChild(remove);
+                item.appendChild(chip);
+                contextList.appendChild(item);
+            });
+        }
+
+        /* Remove the file. Move the focus to the next remove button, or to the message field when the list is empty. */
+        function removeContextFile(id) {
+            var index = -1;
+
+            contextFiles.forEach(function (file, position) {
+                if (file.id === id) {
+                    index = position;
+                }
+            });
+
+            if (index === -1) {
+                return;
+            }
+
+            contextFiles.splice(index, 1);
+            renderContext();
+
+            var buttons = contextList ? contextList.querySelectorAll('.context-remove') : [];
+            var next = buttons[Math.min(index, buttons.length - 1)];
+
+            (next || input).focus();
+        }
+
+        /* The graph sends the files of the open node. A new node replaces the context. */
+        document.addEventListener('ba-panel:context', function (event) {
+            var files = event.detail && Array.isArray(event.detail.files) ? event.detail.files : [];
+
+            contextFiles = files.slice();
+            renderContext();
+        });
+
+        /* Conversation */
+
+        function append(element) {
+            conversation.appendChild(element);
+            conversation.scrollTop = conversation.scrollHeight;
+
+            return element;
+        }
+
+        function appendText(className, text) {
+            var message = document.createElement('div');
+            var paragraph = document.createElement('p');
+
+            message.className = 'message ' + className;
+            paragraph.textContent = text;
+            message.appendChild(paragraph);
+
+            return append(message);
+        }
+
+        /* The server renders the Markdown with raw HTML escaped and unsafe links removed. */
+        function appendReport(html) {
+            var message = document.createElement('div');
+            var body = document.createElement('div');
+
+            message.className = 'message message-report';
+            body.className = 'markdown';
+            body.innerHTML = html;
+            message.appendChild(body);
+
+            return append(message);
+        }
+
+        function updateSendState() {
+            sendButton.disabled = busy || input.value.trim() === '';
+        }
+
+        function setBusy(value) {
+            busy = value;
+            input.disabled = value;
+            conversation.setAttribute('aria-busy', value ? 'true' : 'false');
+            updateSendState();
+        }
+
+        function errorMessage(response, data) {
+            if (data && typeof data.message === 'string' && data.message !== '') {
+                return data.message;
+            }
+
+            return response && response.status === 419 ? 'The page session expired. Reload the page.' : MESSAGE_FAILED;
+        }
+
+        function send() {
+            var message = input.value.trim();
+
+            if (busy || message === '') {
+                return;
+            }
+
+            if (contextFiles.length > MAX_CONTEXT_FILES) {
+                appendText('message-error', MESSAGE_TOO_MANY);
+
+                return;
+            }
+
+            var headers = {
+                Accept: 'application/json',
+                'Content-Type': 'application/json'
+            };
+
+            if (csrfMeta && csrfMeta.content) {
+                headers['X-CSRF-TOKEN'] = csrfMeta.content;
+            }
+
+            if (suggestions) {
+                suggestions.hidden = true;
+            }
+
+            appendText('message-user', message);
+            input.value = '';
+
+            var pending = appendText('message-status', MESSAGE_PENDING);
+
+            setBusy(true);
+
+            fetch(feasibilityUrl, {
+                method: 'POST',
+                headers: headers,
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    message: message,
+                    context: contextFiles.map(function (file) {
+                        return file.id;
+                    })
+                })
+            })
+                .then(function (response) {
+                    return response.json()
+                        .catch(function () {
+                            return null;
+                        })
+                        .then(function (data) {
+                            if (!response.ok || !data || typeof data.html !== 'string') {
+                                throw new Error(errorMessage(response, data));
+                            }
+
+                            return data;
+                        });
+                })
+                .then(function (data) {
+                    pending.remove();
+                    appendReport(data.html);
+
+                    latestReport = {
+                        id: data.report && data.report.metadata ? String(data.report.metadata.report_id || '') : '',
+                        markdown: typeof data.markdown === 'string' ? data.markdown : ''
+                    };
+
+                    if (exportButton) {
+                        exportButton.disabled = latestReport.markdown === '';
+                    }
+                })
+                .catch(function (error) {
+                    pending.remove();
+                    appendText('message-error', error && error.message ? error.message : MESSAGE_FAILED);
+
+                    /* Give the message back, so the user can send it again. */
+                    if (input.value.trim() === '') {
+                        input.value = message;
+                    }
+                })
+                .then(function () {
+                    setBusy(false);
+                    input.focus();
+                });
+        }
+
+        input.addEventListener('input', updateSendState);
+
+        /* Enter sends the message. Shift+Enter adds a new line. An input method composition is not interrupted. */
+        input.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+                event.preventDefault();
+                send();
+            }
+        });
+
+        sendButton.addEventListener('click', send);
+
+        if (suggestions) {
+            suggestions.addEventListener('click', function (event) {
+                var button = event.target.closest ? event.target.closest('.suggestion') : null;
+
+                if (!button || busy) {
+                    return;
+                }
+
+                input.value = button.textContent.trim();
+                updateSendState();
+                input.focus();
+            });
+        }
+
+        /* Download the latest report. The file is made in the browser from the Markdown of the response. */
+        if (exportButton) {
+            exportButton.addEventListener('click', function () {
+                if (!latestReport || latestReport.markdown === '') {
+                    return;
+                }
+
+                var name = 'feasibility-' + (latestReport.id.replace(/[^A-Za-z0-9_-]/g, '') || 'report') + '.md';
+                var url = URL.createObjectURL(new Blob([latestReport.markdown], { type: 'text/markdown;charset=utf-8' }));
+                var link = document.createElement('a');
+
+                link.href = url;
+                link.download = name;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+
+                window.setTimeout(function () {
+                    URL.revokeObjectURL(url);
+                }, 0);
+            });
+        }
+
+        renderContext();
+        updateSendState();
     })();
 </script>
 </body>
