@@ -17,16 +17,20 @@ readonly class FeasibilityAgentFactory
     public function __construct(
         private ProviderFactory $providers,
         private AiSettings $settings,
+        private PromptLoader $prompts,
     ) {
     }
 
     /**
      * Build a new agent. Each call builds a new agent. Each agent keeps no history between requests.
      *
-     * @throws InvalidConfigurationException When the AI provider is not configured.
+     * @throws InvalidConfigurationException When the AI provider is not configured or the prompt file is not valid.
      */
     public function make(): FeasibilityAgent
     {
-        return new FeasibilityAgent($this->providers->fromConfig($this->settings->toArray()));
+        return new FeasibilityAgent(
+            $this->providers->fromConfig($this->settings->toArray()),
+            $this->prompts->load($this->settings->instructionsPath()),
+        );
     }
 }

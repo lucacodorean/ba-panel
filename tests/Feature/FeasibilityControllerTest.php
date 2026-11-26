@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
 use Lucacodorean\BaPanel\Core\Ai\FeasibilityAgentFactory;
+use Lucacodorean\BaPanel\Core\Ai\PromptLoader;
 use Lucacodorean\BaPanel\Core\Ai\ProviderFactory;
 use Lucacodorean\BaPanel\Core\Config\AiSettings;
 use Lucacodorean\BaPanel\Core\Exceptions\InvalidConfigurationException;
@@ -92,6 +93,7 @@ function bindFeasibilityProvider(TestCase $test, FakeAIProvider $provider): Fake
     $app->instance(FeasibilityAgentFactory::class, new FakeFeasibilityAgentFactory(
         $app->make(ProviderFactory::class),
         $app->make(AiSettings::class),
+        $app->make(PromptLoader::class),
         $provider,
     ));
 

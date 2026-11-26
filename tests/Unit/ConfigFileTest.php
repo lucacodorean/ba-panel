@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Lucacodorean\BaPanel\Tests\Support\EnvironmentVariables;
 
-const BAP_ENV_NAMES = ['BAP_ENABLED', 'BAP_AI_PROVIDER', 'BAP_AI_MODEL', 'BAP_AI_KEY', 'BAP_DOCS_ARRAY'];
+const BAP_ENV_NAMES = ['BAP_ENABLED', 'BAP_AI_PROVIDER', 'BAP_AI_MODEL', 'BAP_AI_KEY', 'BAP_AI_INSTRUCTIONS_PATH', 'BAP_DOCS_ARRAY'];
 
 /**
  * Load the package config file with the given environment variables.
@@ -41,6 +41,7 @@ it('uses defaults when no environment variable is set', function (): void {
             'provider' => null,
             'model' => null,
             'key' => null,
+            'instructions_path' => null,
         ],
         'docs' => [],
     ]);
@@ -58,13 +59,21 @@ it('reads the AI settings from the environment', function (): void {
         'BAP_AI_PROVIDER' => 'openai',
         'BAP_AI_MODEL' => 'gpt-test',
         'BAP_AI_KEY' => 'secret-key',
+        'BAP_AI_INSTRUCTIONS_PATH' => 'resources/prompts/custom.md',
     ]);
 
     expect($config['ai'])->toBe([
         'provider' => 'openai',
         'model' => 'gpt-test',
         'key' => 'secret-key',
+        'instructions_path' => 'resources/prompts/custom.md',
     ]);
+});
+
+it('has no prompt path when BAP_AI_INSTRUCTIONS_PATH is not set', function (): void {
+    // PromptLoader then selects the published or the package prompt file.
+    expect(loadBaPanelConfig(['BAP_AI_PROVIDER' => 'openai'])['ai'])
+        ->toBe(['provider' => 'openai', 'model' => null, 'key' => null, 'instructions_path' => null]);
 });
 
 it('parses BAP_DOCS_ARRAY as a comma-separated list', function (string $value, array $expected): void {

@@ -15,7 +15,7 @@ use Lucacodorean\BaPanel\Tests\TestCase;
 it('merges the package config under the ba-panel key', function (): void {
     expect(config('ba-panel'))->toBeArray()
         ->and(config('ba-panel.enabled'))->toBeFalse()
-        ->and(config('ba-panel.ai'))->toBe(['provider' => null, 'model' => null, 'key' => null])
+        ->and(config('ba-panel.ai'))->toBe(['provider' => null, 'model' => null, 'key' => null, 'instructions_path' => null])
         ->and(config('ba-panel.docs'))->toBe([]);
 });
 
@@ -186,5 +186,31 @@ it('throws on boot when enabled with an unsupported provider', function (): void
         expect($exception->errors())->toBe([ProviderFactory::unsupportedMessage('ollama')]);
     } finally {
         $fs->cleanup();
+    }
+});
+
+it('registers the prompts publish path under the ba-panel-prompts tag', function (): void {
+    $paths = ServiceProvider::pathsToPublish(BaPanelServiceProvider::class, 'ba-panel-prompts');
+
+    expect($paths)->toHaveCount(1);
+
+    $source = (string) array_key_first($paths);
+
+    expect(realpath($source))->toBe(realpath(dirname(__DIR__, 2).'/resources/prompts'))
+        ->and($paths[$source])->toBe(resource_path('prompts/vendor/ba-panel'));
+});
+
+it('publishes the feasibility prompt with the ba-panel-prompts tag', function (): void {
+    /** @var TestCase $this */
+    $target = resource_path('prompts/vendor/ba-panel');
+    $package = dirname(__DIR__, 2).'/resources/prompts';
+
+    try {
+        $this->artisan('vendor:publish', ['--tag' => 'ba-panel-prompts', '--force' => true])->assertSuccessful();
+
+        expect(is_file($target.'/feasibility.md'))->toBeTrue()
+            ->and(file_get_contents($target.'/feasibility.md'))->toBe(file_get_contents($package.'/feasibility.md'));
+    } finally {
+        File::deleteDirectory($target);
     }
 });

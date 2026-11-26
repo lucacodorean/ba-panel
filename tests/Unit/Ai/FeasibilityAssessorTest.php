@@ -153,7 +153,7 @@ it('returns the report of the agent with new metadata', function (): void {
     // The assessor uses the current time. The test compares it with times before and after the call.
     // The ISO-8601 format has no fractions of a second. Thus the start is rounded down to the second.
     $before = new DateTimeImmutable('@'.time());
-    $report = feasibilityAssessor()->assess(new FeasibilityAgent($provider), 'Add a CSV export.', []);
+    $report = feasibilityAssessor()->assess(new FeasibilityAgent($provider, 'Test persona.'), 'Add a CSV export.', []);
     $after = new DateTimeImmutable;
     $metadata = $report->metadata();
     $created = DateTimeImmutable::createFromFormat(DateTimeInterface::ATOM, $metadata->createdAt);
@@ -172,7 +172,7 @@ it('sends the built message to the provider in one structured request', function
     $provider = new FakeAIProvider(FeasibilityReportFixture::message());
     $files = [assessorNode('aaaaaaaaaaaa', 'docs/invoices.md', 'Invoices', "---\ntitle: Invoices\n---\n# Invoices\n\nThe invoice module.\n")];
 
-    feasibilityAssessor()->assess(new FeasibilityAgent($provider), 'Add a CSV export.', $files);
+    feasibilityAssessor()->assess(new FeasibilityAgent($provider, 'Test persona.'), 'Add a CSV export.', $files);
 
     $provider->assertMethodCallCount('structured', 1);
     $provider->assertSent(static function (RequestRecord $record): bool {
@@ -187,8 +187,8 @@ it('sends the built message to the provider in one structured request', function
 
 it('sets a new random thread id on each agent', function (): void {
     $assessor = feasibilityAssessor();
-    $first = new FeasibilityAgent(new FakeAIProvider(FeasibilityReportFixture::message()));
-    $second = new FeasibilityAgent(new FakeAIProvider(FeasibilityReportFixture::message()));
+    $first = new FeasibilityAgent(new FakeAIProvider(FeasibilityReportFixture::message()), 'Test persona.');
+    $second = new FeasibilityAgent(new FakeAIProvider(FeasibilityReportFixture::message()), 'Test persona.');
 
     $assessor->assess($first, 'Request.', []);
     $assessor->assess($second, 'Request.', []);
@@ -201,8 +201,8 @@ it('sets a new random thread id on each agent', function (): void {
 it('creates new metadata for each report', function (): void {
     $assessor = feasibilityAssessor();
 
-    $first = $assessor->assess(new FeasibilityAgent(new FakeAIProvider(FeasibilityReportFixture::message())), 'Request.', []);
-    $second = $assessor->assess(new FeasibilityAgent(new FakeAIProvider(FeasibilityReportFixture::message())), 'Request.', []);
+    $first = $assessor->assess(new FeasibilityAgent(new FakeAIProvider(FeasibilityReportFixture::message()), 'Test persona.'), 'Request.', []);
+    $second = $assessor->assess(new FeasibilityAgent(new FakeAIProvider(FeasibilityReportFixture::message()), 'Test persona.'), 'Request.', []);
 
     expect($first->metadata()->reportId)->not->toBe($second->metadata()->reportId);
 });

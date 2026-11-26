@@ -47,7 +47,7 @@ final readonly class FeasibilityController
      * Request: {"message": string, "context": list<string>}. Each context item is a node id.
      * Response 200: {"report": array, "markdown": string, "html": string}.
      * Errors: {"message": string} with 403 for an invalid CSRF token, 422 for an invalid request,
-     * 503 when the AI is not configured, 502 when the agent fails.
+     * 503 when the AI is not configured or the prompt file is not valid, 502 when the agent fails.
      */
     public function assess(Request $request): JsonResponse
     {

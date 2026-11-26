@@ -53,6 +53,15 @@ For the reasons behind this structure, see [ADR 0008](docs/adr/0008-extract-fram
    This command copies the templates to `resources/views/vendor/ba-panel` in your application.
    See [Override the templates](#override-the-templates).
 
+4. Optional: publish the prompt file of the feasibility agent.
+
+   ```bash
+   php artisan vendor:publish --tag=ba-panel-prompts
+   ```
+
+   This command copies the prompt file to `resources/prompts/vendor/ba-panel/feasibility.md` in your application.
+   See [Customize the agent prompt](#customize-the-agent-prompt).
+
 Laravel package discovery registers `Lucacodorean\BaPanel\Laravel\BaPanelServiceProvider`.
 You do not need to register the service provider manually.
 
@@ -104,6 +113,7 @@ Set the environment variables in the `.env` file of your application. Both shell
 | `BAP_AI_PROVIDER` | string | none    | yes, when `BAP_ENABLED=true` | The AI provider name. See the supported values below.    |
 | `BAP_AI_MODEL`    | string | none    | yes, when `BAP_ENABLED=true` | The AI model name.                                       |
 | `BAP_AI_KEY`      | string | none    | yes, when `BAP_ENABLED=true` | The API key for the AI provider.                         |
+| `BAP_AI_INSTRUCTIONS_PATH` | string | `null` | no                 | The path of the prompt file of the feasibility agent. See [Customize the agent prompt](#customize-the-agent-prompt). |
 | `BAP_DOCS_ARRAY`  | string | empty   | yes, when `BAP_ENABLED=true` | A comma-separated list of documentation paths.           |
 
 The package reads `BAP_ENABLED` as a boolean. The values `true`, `1`, `yes`, and `on` enable the panel.
@@ -149,7 +159,9 @@ BAP_DOCS_ARRAY="docs, README.md"
 
 ### Laravel configuration file
 
-`config/ba-panel.php` reads the environment variables. The keys are `enabled`, `ai.provider`, `ai.model`, `ai.key`, and `docs`.
+`config/ba-panel.php` reads the environment variables. The keys are `enabled`, `ai.provider`, `ai.model`, `ai.key`, `ai.instructions_path`, and `docs`.
+
+- `ai.instructions_path` reads `BAP_AI_INSTRUCTIONS_PATH`. The default is `null`.
 
 ### Symfony configuration file
 
@@ -173,6 +185,7 @@ ba_panel:
 | `ai.provider` | `%env(default::BAP_AI_PROVIDER)%` | The AI provider name.                                           |
 | `ai.model`    | `%env(default::BAP_AI_MODEL)%`  | The AI model name.                                                 |
 | `ai.key`      | `%env(default::BAP_AI_KEY)%`    | The API key for the AI provider.                                   |
+| `ai.instructions_path` | `%env(default::BAP_AI_INSTRUCTIONS_PATH)%` | The path of the prompt file of the feasibility agent. A relative path resolves against `%kernel.project_dir%`. |
 | `docs`        | `%env(default::BAP_DOCS_ARRAY)%` | A list of paths, or one comma-separated string.                   |
 
 - Keep the API key in an environment variable. Do not write the key in the YAML file.
@@ -362,7 +375,7 @@ final readonly class AssessRequest
 ```
 
 - `assess()` throws `InvalidFeasibilityRequestException` when the input is not valid. The message is safe to show to the user.
-- `assess()` throws `InvalidConfigurationException` when the AI provider is not configured.
+- `assess()` throws `InvalidConfigurationException` when the AI provider is not configured or the prompt file is not valid.
 - `assess()` throws another `Throwable` when the agent fails.
 
 For more control, use `FeasibilityAssessor::assess()`. It runs the agent and returns a `FeasibilityReport`. The files are graph nodes.
@@ -397,12 +410,106 @@ final readonly class AssessWithAssessor
 
 - `assess()` sets a new random thread id on the agent. The model does not see earlier requests.
 - The user message has one block for each file, without the front matter. The request is the last block.
-- `FeasibilityAgentFactory::make()` throws `InvalidConfigurationException` when the AI provider is not configured.
+- `FeasibilityAgentFactory::make()` throws `InvalidConfigurationException` when the AI provider is not configured or the prompt file is not valid.
 - `toMarkdown()` needs the `TemplateRenderer` as its argument. Neuron AI creates the report, so the report cannot get the renderer in its constructor.
 - `toArray()` returns the report as an array with snake_case keys.
 - `assess()` attaches the metadata to the report. `FeasibilityReport::metadata()` throws `LogicException` when no metadata is attached.
 - To use another AI provider in a test, extend `FeasibilityAgentFactory`. Register your class as the `FeasibilityAgentFactory` service in the container. The class is not final.
 - `FeasibilityAgentFactory` is a `readonly class`. Declare your subclass as a `readonly class` too, for example `final readonly class MyAgentFactory extends FeasibilityAgentFactory`.
+
+### Customize the agent prompt
+
+The system prompt of the feasibility agent has two blocks.
+
+| block    | source                   | contents                                                  | can you change it |
+|----------|--------------------------|-----------------------------------------------------------|-------------------|
+| Persona  | A Markdown prompt file   | The role, the assessment rules, and the style of the agent. | yes             |
+| Contract | `FeasibilityAgent` code  | The output rules of the report.                           | no                |
+
+- The package prompt file is `resources/prompts/feasibility.md`.
+- The contract block contains these rules:
+  - Use only the documentation files of the request.
+  - When the files do not give a piece of information, write "Not specified in the documentation". Add an open question.
+  - Give a verdict for each dimension and an overall verdict.
+  - Use the overall verdict `needs_more_info` when the files do not give enough information.
+  - In the references, list only the paths of the used files.
+- The contract block always comes after the persona block. Thus the contract rules apply when the persona conflicts with them.
+- The prompt file cannot remove or change the contract rules. `FeasibilityAssessor` needs these rules for the structured report.
+- The package trims the text of the prompt file.
+
+#### Prompt file precedence
+
+The package selects the prompt file in this order. The first available step wins.
+
+1. The configured path: `BAP_AI_INSTRUCTIONS_PATH`, `ba-panel.ai.instructions_path` in Laravel, or `ba_panel.ai.instructions_path` in Symfony.
+   - A relative path resolves against the application base path. In Laravel, the base path is `base_path()`. In Symfony, the base path is `%kernel.project_dir%`.
+   - An absolute path is used as given.
+   - A blank value is the same as no value.
+   - When the configured file is missing, not readable, or empty, the package throws `InvalidConfigurationException`. The package does not try the next steps.
+2. Laravel only: the published copy `resources/prompts/vendor/ba-panel/feasibility.md`, when the file exists.
+3. The package prompt file `resources/prompts/feasibility.md`.
+
+#### Customize the prompt in Laravel
+
+1. Publish the prompt file.
+
+   ```bash
+   php artisan vendor:publish --tag=ba-panel-prompts
+   ```
+
+2. Edit `resources/prompts/vendor/ba-panel/feasibility.md`.
+
+You do not need a configuration value. The package uses the published copy when the file exists.
+
+To use another file, set `BAP_AI_INSTRUCTIONS_PATH`. The configured path comes before the published copy.
+
+#### Customize the prompt in Symfony
+
+Symfony has no publish command. Symfony also has no automatic override location for the prompt file.
+
+1. Copy `vendor/lucacodorean/ba-panel/resources/prompts/feasibility.md` into your project, for example to `config/ba_panel/feasibility.md`.
+2. Edit the copy.
+3. Set the path in `BAP_AI_INSTRUCTIONS_PATH` or in `config/packages/ba_panel.yaml`.
+
+   ```yaml
+   ba_panel:
+       ai:
+           instructions_path: config/ba_panel/feasibility.md
+   ```
+
+When no path is set, the package uses the package prompt file.
+
+#### Path examples
+
+```dotenv
+# A relative path. The package resolves it against the application base path.
+BAP_AI_INSTRUCTIONS_PATH=config/ba_panel/feasibility.md
+
+# An absolute path. The package uses it as given.
+BAP_AI_INSTRUCTIONS_PATH=/var/www/app/config/ba_panel/feasibility.md
+```
+
+#### Prompt file errors
+
+The package reads the prompt file when it builds the agent. The package does not check the prompt file at boot.
+
+| error                                    | cause                                       |
+|------------------------------------------|---------------------------------------------|
+| `The prompt file does not exist: <path>` | No file exists at the path.                 |
+| `The prompt file is not readable: <path>` | The package cannot read the file.          |
+| `The prompt file is empty: <path>`       | The file contains only whitespace or no text. |
+
+- `<path>` is the resolved path.
+- The exception message starts with the `Invalid ba-panel configuration:` header. Each error is on a separate line.
+
+  ```text
+  Invalid ba-panel configuration:
+  - The prompt file does not exist: /var/www/app/config/ba_panel/feasibility.md
+  ```
+
+- The feasibility endpoint returns `503` with the message "The feasibility agent is not configured." The response does not contain the path.
+
+For the reasons behind the prompt file, see [ADR 0009](docs/adr/0009-load-feasibility-agent-persona-from-editable-prompt-file.md).
 
 ### Endpoint `POST /ba-panel/feasibility`
 
@@ -433,7 +540,7 @@ Responses:
 | `200`  | `{report, markdown, html}`       | The agent created the report.                                                          |
 | `403`  | `{message}`                      | Symfony only. The CSRF check is enabled and the CSRF token is missing or not valid.    |
 | `422`  | `{message}`                      | The message or the context is not valid. An id is unknown. In Symfony, the body is not a JSON object. |
-| `503`  | `{message}`                      | The AI provider is not configured.                                                     |
+| `503`  | `{message}`                      | The AI provider is not configured. The prompt file is not valid.                       |
 | `502`  | `{message}`                      | The agent or the AI provider failed. The graph build or the report template failed.    |
 
 - `report` is the report as an array with snake_case keys. `report.metadata.report_id` is the report id.
@@ -542,6 +649,7 @@ The package has two plain PHP templates. Both shells use them.
 - The package validates the configuration only when the panel is enabled.
 - When the panel is not enabled, the package does no validation. Installation and package discovery work before you set the variables.
 - The value of `BAP_AI_PROVIDER` must be a supported value.
+- The boot validation does not check `BAP_AI_INSTRUCTIONS_PATH`. The package checks the prompt file when it builds the agent. See [Prompt file errors](#prompt-file-errors).
 - The package checks all rules before it reports an error.
 - The package throws one `Lucacodorean\BaPanel\Core\Exceptions\InvalidConfigurationException` with all errors.
 - The exception message lists each error on a separate line.
