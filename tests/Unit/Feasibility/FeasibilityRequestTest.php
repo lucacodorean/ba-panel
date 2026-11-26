@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use Lucacodorean\BaPanel\Core\Exceptions\InvalidFeasibilityRequestException;
 use Lucacodorean\BaPanel\Core\Feasibility\FeasibilityRequest;
+use Lucacodorean\BaPanel\Core\Graph\FrontMatterParser;
 use Lucacodorean\BaPanel\Core\Graph\Graph;
 use Lucacodorean\BaPanel\Core\Graph\GraphBuilder;
-use Lucacodorean\BaPanel\Core\Graph\FrontMatterParser;
 use Lucacodorean\BaPanel\Core\Graph\Node;
 use Lucacodorean\BaPanel\Tests\Support\TemporaryFilesystem;
 

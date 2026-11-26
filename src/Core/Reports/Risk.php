@@ -42,8 +42,7 @@ final readonly class Risk
 
         #[SchemaProperty(description: 'The team or person that owns the risk. Write "Not specified" when the documentation does not name an owner.')]
         public string $owner,
-    ) {
-    }
+    ) {}
 
     /**
      * Return the severity. The severity is the probability multiplied by the impact, from 1 to 25.

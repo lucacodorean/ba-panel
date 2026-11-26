@@ -42,13 +42,12 @@ final readonly class FeasibilityRequest
     private const string CONTEXT_UNKNOWN_ID = 'The context contains an unknown file id: %s.';
 
     /**
-     * @param list<Node> $files
+     * @param  list<Node>  $files
      */
     private function __construct(
         public string $message,
         public array $files,
-    ) {
-    }
+    ) {}
 
     /**
      * Validate the raw input. The context is a list of node ids. Each id is found only in the graph.

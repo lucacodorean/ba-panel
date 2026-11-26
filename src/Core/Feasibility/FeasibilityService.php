@@ -41,8 +41,7 @@ final readonly class FeasibilityService
         private FeasibilityAssessor $assessor,
         private TemplateRenderer $renderer,
         private SafeMarkdownConverter $converter,
-    ) {
-    }
+    ) {}
 
     /**
      * Return the report of the request as an array, as Markdown, and as safe HTML.

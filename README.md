@@ -2,6 +2,7 @@
 A PHP package intended to create a panel for the Business analysts to access the documentation saved at project level.
 
 The package works in Laravel 13 and in Symfony 8.1 applications.
+The package needs PHP 8.4 or higher.
 
 ## Package structure
 
@@ -674,7 +675,13 @@ For the choice of the AI provider integration, see [ADR 0002](docs/adr/0002-adop
 
 ## Upgrade notes
 
-This version has breaking changes for Laravel hosts.
+This version has breaking changes. Most of them apply to Laravel hosts.
+
+### PHP 8.4 required
+
+- The package needs PHP `^8.4`. The previous constraint was `^8.3`.
+- The development tools need PHP 8.4. The CI pipeline tests only PHP 8.4.
+- Upgrade the application to PHP 8.4 or higher. If you cannot upgrade, stay on v0.3.x.
 
 ### New namespaces
 
@@ -713,3 +720,19 @@ The rule for all other classes: `Lucacodorean\BaPanel\<Group>\<Class>` becomes `
 - Composer no longer installs `illuminate/view`. A Laravel application already contains it.
 - When the graph build or the report template fails, the feasibility endpoint now returns `502`, not `500`.
 - In Laravel, the container binds `FeasibilityAgentFactory` for each resolution, not one time. A change of the AI settings applies to the next agent.
+
+## Development
+
+The CI pipeline is in `.github/workflows/ci.yml`. It uses PHP 8.4. The jobs run in this sequence: `composer audit`, Pint and PHPStan, Pest.
+
+Run the same checks locally with the Composer scripts.
+
+| script             | command           | check                                    |
+|--------------------|-------------------|------------------------------------------|
+| `composer lint`    | `pint --test`     | The code style. It changes no files.     |
+| `composer analyse` | `phpstan analyse` | The static analysis with `phpstan.neon`. |
+| `composer test`    | `pest`            | The test suite.                          |
+
+- Pint uses the `laravel` preset. `pint.json` disables the `no_alternative_syntax` and `method_chaining_indentation` rules.
+- To fix the code style, run `vendor/bin/pint`.
+- In DDEV, run the gates with `ddev exec pest` and `ddev exec phpstan`.

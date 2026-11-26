@@ -18,8 +18,7 @@ readonly class FeasibilityAgentFactory
         private ProviderFactory $providers,
         private AiSettings $settings,
         private PromptLoader $prompts,
-    ) {
-    }
+    ) {}
 
     /**
      * Build a new agent. Each call builds a new agent. Each agent keeps no history between requests.

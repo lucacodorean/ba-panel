@@ -33,8 +33,7 @@ final readonly class ApiChange
 
         #[SchemaProperty(description: 'The versioning strategy for the change. Write "Not specified" when the documentation does not describe one.')]
         public string $versioningStrategy,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{endpoint: string, method: string, change: string, breaking: bool, versioning_strategy: string}

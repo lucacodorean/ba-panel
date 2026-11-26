@@ -38,8 +38,8 @@ final readonly class Vectorizer
     /**
      * Return the cosine similarity of two vectors, from 0 to 1. Return 0 when a vector is empty.
      *
-     * @param array<string, int> $first
-     * @param array<string, int> $second
+     * @param  array<string, int>  $first
+     * @param  array<string, int>  $second
      */
     public function cosine(array $first, array $second): float
     {
@@ -59,7 +59,7 @@ final readonly class Vectorizer
     }
 
     /**
-     * @param array<string, int> $vector
+     * @param  array<string, int>  $vector
      */
     private function squaredSum(array $vector): int
     {

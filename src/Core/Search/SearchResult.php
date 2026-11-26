@@ -14,13 +14,12 @@ final readonly class SearchResult
     private const int SCORE_PRECISION = 4;
 
     /**
-     * @param float $score The similarity, from 0 to 1.
+     * @param  float  $score  The similarity, from 0 to 1.
      */
     public function __construct(
         public Node $node,
         public float $score,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{id: string, name: string, path: string, score: float}

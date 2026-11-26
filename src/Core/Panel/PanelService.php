@@ -25,8 +25,7 @@ final readonly class PanelService
         private GraphBuilder $builder,
         private DocumentRenderer $documents,
         private NameSearch $search,
-    ) {
-    }
+    ) {}
 
     /**
      * Return the documentation graph.

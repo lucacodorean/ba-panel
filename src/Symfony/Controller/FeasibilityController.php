@@ -32,14 +32,13 @@ final readonly class FeasibilityController
     private const string LOG_MESSAGE = 'The feasibility agent failed.';
 
     /**
-     * @param ?CsrfTokenManagerInterface $csrf Null when the host has no CSRF token manager. Then the CSRF check is off.
+     * @param  ?CsrfTokenManagerInterface  $csrf  Null when the host has no CSRF token manager. Then the CSRF check is off.
      */
     public function __construct(
         private FeasibilityService $feasibility,
         private LoggerInterface $logger,
         private ?CsrfTokenManagerInterface $csrf = null,
-    ) {
-    }
+    ) {}
 
     /**
      * Return the report of the request as an array, as Markdown, and as safe HTML.

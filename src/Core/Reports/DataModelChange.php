@@ -33,8 +33,7 @@ final readonly class DataModelChange
 
         #[SchemaProperty(description: 'True when existing data must be filled in for the change.')]
         public bool $dataBackfill,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{entity: string, change: string, migration_required: bool, reversible: bool, data_backfill: bool}

@@ -22,11 +22,11 @@ use Lucacodorean\BaPanel\Core\View\TemplateRenderer;
  */
 final class BaPanelServiceProvider extends ServiceProvider
 {
-    private const string CONFIG_PATH = __DIR__ . '/../../config/ba-panel.php';
+    private const string CONFIG_PATH = __DIR__.'/../../config/ba-panel.php';
 
-    private const string VIEWS_PATH = __DIR__ . '/../../resources/views';
+    private const string VIEWS_PATH = __DIR__.'/../../resources/views';
 
-    private const string PROMPTS_PATH = __DIR__ . '/../../resources/prompts';
+    private const string PROMPTS_PATH = __DIR__.'/../../resources/prompts';
 
     /**
      * The host directory for the published prompt files.
@@ -38,7 +38,7 @@ final class BaPanelServiceProvider extends ServiceProvider
      */
     private const string FEASIBILITY_PROMPT_FILE = 'feasibility.md';
 
-    private const string ROUTES_PATH = __DIR__ . '/../../routes/laravel.php';
+    private const string ROUTES_PATH = __DIR__.'/../../routes/laravel.php';
 
     /**
      * The host directory for the published templates. A template in this directory overrides the package template.

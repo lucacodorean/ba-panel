@@ -35,8 +35,7 @@ final readonly class ReportMetadata
         public string $generatedAt,
         public string $generatorName,
         public string $generatorVersion,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{

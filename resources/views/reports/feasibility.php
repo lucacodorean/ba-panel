@@ -11,11 +11,13 @@
   A line that has only a PHP block makes no output.
 */
 
+use Lucacodorean\BaPanel\Core\Reports\FeasibilityReport;
 use Lucacodorean\BaPanel\Core\Reports\MarkdownText as Md;
+use Lucacodorean\BaPanel\Core\Reports\ReportMetadata;
 
-/** @var \Lucacodorean\BaPanel\Core\Reports\FeasibilityReport $report */
-/** @var \Lucacodorean\BaPanel\Core\Reports\ReportMetadata $metadata */
-/** @var \Closure(string|int|float|bool|\Stringable|null): string $e */
+/** @var FeasibilityReport $report */
+/** @var ReportMetadata $metadata */
+/** @var Closure(string|int|float|bool|Stringable|null): string $e */
 ?>
 # Feasibility Report: <?= Md::inline($report->requestTitle), "\n" ?>
 

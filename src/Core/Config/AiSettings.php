@@ -28,15 +28,14 @@ final readonly class AiSettings
         public ?string $model = null,
         public ?string $key = null,
         public ?string $instructionsPath = null,
-    ) {
-    }
+    ) {}
 
     /**
      * Build the settings from the "ai" config array. A value that is not a string becomes null.
      *
      * Expected shape: array{provider?: ?string, model?: ?string, key?: ?string, instructions_path?: ?string}.
      *
-     * @param array<mixed> $ai
+     * @param  array<mixed>  $ai
      */
     public static function fromArray(array $ai): self
     {

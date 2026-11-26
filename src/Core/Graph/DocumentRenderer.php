@@ -14,8 +14,7 @@ final readonly class DocumentRenderer
     public function __construct(
         private FrontMatterParser $frontMatter,
         private SafeMarkdownConverter $converter,
-    ) {
-    }
+    ) {}
 
     /**
      * Return the HTML of the document body. The front matter is not rendered.

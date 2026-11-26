@@ -34,8 +34,7 @@ final readonly class Dependency
 
         #[SchemaProperty(description: 'The risk that the dependency adds, in one sentence.')]
         public string $risk,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{name: string, type: string, version: string, status: string, risk: string}

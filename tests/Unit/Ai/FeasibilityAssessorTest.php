@@ -15,6 +15,7 @@ use Lucacodorean\BaPanel\Core\Reports\ReportMetadata;
 use Lucacodorean\BaPanel\Core\Reports\ReportMetadataFactory;
 use Lucacodorean\BaPanel\Tests\Support\FeasibilityReportFixture;
 use Lucacodorean\BaPanel\Tests\Support\TemporaryFilesystem;
+use Mockery\MockInterface;
 use NeuronAI\Agent\AgentInterface;
 use NeuronAI\Chat\Messages\ContentBlocks\TextContent;
 use NeuronAI\Chat\Messages\UserMessage;
@@ -208,7 +209,7 @@ it('creates new metadata for each report', function (): void {
 });
 
 it('throws when the agent does not return a feasibility report', function (): void {
-    /** @var AgentInterface&Mockery\MockInterface $agent */
+    /** @var AgentInterface&MockInterface $agent */
     $agent = Mockery::mock(AgentInterface::class);
     $agent->shouldReceive('setThreadId')->once()->andReturnSelf();
     $agent->shouldReceive('structured')->once()->andReturn(new stdClass);
@@ -218,7 +219,7 @@ it('throws when the agent does not return a feasibility report', function (): vo
 });
 
 it('throws when the agent returns null', function (): void {
-    /** @var AgentInterface&Mockery\MockInterface $agent */
+    /** @var AgentInterface&MockInterface $agent */
     $agent = Mockery::mock(AgentInterface::class);
     $agent->shouldReceive('setThreadId')->once()->andReturnSelf();
     $agent->shouldReceive('structured')->once()->andReturnNull();

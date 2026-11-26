@@ -32,8 +32,7 @@ final readonly class Alternative
 
         #[SchemaProperty(description: 'True for the approach that the proposed solution uses. Select at most one approach.')]
         public bool $selected,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{approach: string, pros: string, cons: string, effort: string, selected: bool}

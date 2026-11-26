@@ -20,7 +20,7 @@ final readonly class FrontMatterParser
      */
     public function __construct()
     {
-        $this->parser = new CommonMarkFrontMatterParser(new SymfonyYamlFrontMatterParser());
+        $this->parser = new CommonMarkFrontMatterParser(new SymfonyYamlFrontMatterParser);
     }
 
     /**

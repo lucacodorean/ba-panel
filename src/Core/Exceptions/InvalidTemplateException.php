@@ -9,6 +9,4 @@ use InvalidArgumentException;
 /**
  * The template name is not valid, or no template directory contains the template.
  */
-final class InvalidTemplateException extends InvalidArgumentException
-{
-}
+final class InvalidTemplateException extends InvalidArgumentException {}

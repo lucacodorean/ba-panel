@@ -44,13 +44,12 @@ final readonly class FeasibilityAssessor
     public function __construct(
         private DocumentRenderer $documents,
         private ReportMetadataFactory $metadata,
-    ) {
-    }
+    ) {}
 
     /**
      * Assess the request against the files. Each call uses a new thread id. The report gets new metadata.
      *
-     * @param list<Node> $files
+     * @param  list<Node>  $files
      *
      * @throws UnexpectedValueException When the agent returns an other type.
      */
@@ -71,7 +70,7 @@ final readonly class FeasibilityAssessor
      * Build the user message. The first block counts the files. Each file is one block. The request is the last block.
      * The front matter of each file is removed.
      *
-     * @param list<Node> $files
+     * @param  list<Node>  $files
      */
     public function message(string $message, array $files): UserMessage
     {

@@ -6,12 +6,12 @@ use Lucacodorean\BaPanel\Core\Ai\FeasibilityAgent;
 use Lucacodorean\BaPanel\Core\Reports\FeasibilityReport;
 use Lucacodorean\BaPanel\Tests\Support\FeasibilityReportFixture;
 use NeuronAI\Agent\Agent;
-use NeuronAI\Exceptions\AgentException;
-use NeuronAI\Exceptions\ProviderException;
 use NeuronAI\Chat\Messages\AssistantMessage;
 use NeuronAI\Chat\Messages\ContentBlocks\TextContent;
 use NeuronAI\Chat\Messages\SystemMessage;
 use NeuronAI\Chat\Messages\UserMessage;
+use NeuronAI\Exceptions\AgentException;
+use NeuronAI\Exceptions\ProviderException;
 use NeuronAI\Testing\FakeAIProvider;
 use NeuronAI\Testing\RequestRecord;
 

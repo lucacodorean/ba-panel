@@ -9,6 +9,4 @@ use InvalidArgumentException;
 /**
  * The feasibility request is not valid. The message is safe to show to the user.
  */
-final class InvalidFeasibilityRequestException extends InvalidArgumentException
-{
-}
+final class InvalidFeasibilityRequestException extends InvalidArgumentException {}

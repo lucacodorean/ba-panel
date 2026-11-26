@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Config\Repository;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
@@ -137,11 +138,11 @@ function feasibilitySentContent(RequestRecord $record): string
  * Send the feasibility request as JSON.
  *
  * @param  array<string, mixed>  $payload
- * @return TestResponse<Illuminate\Http\JsonResponse>
+ * @return TestResponse<JsonResponse>
  */
 function postFeasibility(TestCase $test, array $payload): TestResponse
 {
-    /** @var TestResponse<Illuminate\Http\JsonResponse> $response */
+    /** @var TestResponse<JsonResponse> $response */
     $response = $test->postJson(FEASIBILITY_URL, $payload);
 
     return $response;
@@ -217,8 +218,8 @@ it('sends the request and the file contents to the provider in one structured re
     $provider->assertMethodCallCount('structured', 1);
     $provider->assertSent(static function (RequestRecord $record): bool {
         $content = feasibilitySentContent($record);
-        $invoices = "File: ".feasibilityNodePath('docs/invoices.md')."\nTitle: Invoices module\n\n# Invoices\n\nThe invoices module lists all invoices.";
-        $billing = "File: ".feasibilityNodePath('docs/billing.md')."\nTitle: Billing\n\n# Billing\n\nBilling runs each night.";
+        $invoices = 'File: '.feasibilityNodePath('docs/invoices.md')."\nTitle: Invoices module\n\n# Invoices\n\nThe invoices module lists all invoices.";
+        $billing = 'File: '.feasibilityNodePath('docs/billing.md')."\nTitle: Billing\n\n# Billing\n\nBilling runs each night.";
 
         return str_contains($content, 'Documentation files given as context: 2.')
             && str_contains($content, $invoices)

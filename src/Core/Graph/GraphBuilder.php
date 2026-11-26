@@ -36,14 +36,13 @@ final readonly class GraphBuilder
     private const string PAIR_SEPARATOR = '|';
 
     /**
-     * @param list<string> $paths The configured files and directories.
+     * @param  list<string>  $paths  The configured files and directories.
      */
     public function __construct(
         private array $paths,
         private string $basePath,
         private FrontMatterParser $frontMatter,
-    ) {
-    }
+    ) {}
 
     /**
      * Scan the paths and return the graph. Missing paths and invalid relations are skipped.
@@ -150,8 +149,8 @@ final readonly class GraphBuilder
     /**
      * Add the Markdown files of the directory and its subdirectories. Skip hidden entries.
      *
-     * @param array<string, true> $files
-     * @param array<string, true> $visited The directories already scanned. This stops symbolic link loops.
+     * @param  array<string, true>  $files
+     * @param  array<string, true>  $visited  The directories already scanned. This stops symbolic link loops.
      */
     private function scanDirectory(string $directory, array &$files, array &$visited): void
     {
@@ -186,7 +185,7 @@ final readonly class GraphBuilder
     }
 
     /**
-     * @param array<array-key, mixed> $metadata
+     * @param  array<array-key, mixed>  $metadata
      */
     private function createNode(string $realPath, array $metadata, string $body): Node
     {
@@ -204,7 +203,7 @@ final readonly class GraphBuilder
     /**
      * Return the front matter title. Fall back to the first "# " heading, then to the name.
      *
-     * @param array<array-key, mixed> $metadata
+     * @param  array<array-key, mixed>  $metadata
      */
     private function title(array $metadata, string $body, string $name): string
     {
@@ -224,7 +223,7 @@ final readonly class GraphBuilder
     /**
      * Return the relation values as strings. Ignore values of other types.
      *
-     * @param array<array-key, mixed> $metadata
+     * @param  array<array-key, mixed>  $metadata
      * @return list<string>
      */
     private function relationValues(array $metadata): array

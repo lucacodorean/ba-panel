@@ -21,8 +21,8 @@ final readonly class Graph
     private array $relationships;
 
     /**
-     * @param list<Node> $nodes
-     * @param list<Relationship> $relationships
+     * @param  list<Node>  $nodes
+     * @param  list<Relationship>  $relationships
      */
     public function __construct(array $nodes = [], array $relationships = [])
     {
@@ -123,7 +123,7 @@ final readonly class Graph
     }
 
     /**
-     * @param list<Node> $nodes
+     * @param  list<Node>  $nodes
      * @return list<Node>
      */
     private function sortByPath(array $nodes): array

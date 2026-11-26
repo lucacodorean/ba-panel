@@ -34,7 +34,7 @@ final class BaPanelRouteLoader extends Loader
     private const string CONTROLLER = '_controller';
 
     /**
-     * @param ?bool $enabled The "ba_panel.enabled" value. Null when the environment variable is not set.
+     * @param  ?bool  $enabled  The "ba_panel.enabled" value. Null when the environment variable is not set.
      */
     public function __construct(private readonly ?bool $enabled, ?string $env = null)
     {
@@ -43,7 +43,7 @@ final class BaPanelRouteLoader extends Loader
 
     public function load(mixed $resource, ?string $type = null): RouteCollection
     {
-        $routes = new RouteCollection();
+        $routes = new RouteCollection;
 
         if ($this->enabled !== true) {
             return $routes;

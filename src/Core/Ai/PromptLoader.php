@@ -44,21 +44,20 @@ final readonly class PromptLoader
     private const string MESSAGE_EMPTY = 'The prompt file is empty: %s';
 
     /**
-     * @param string      $basePath      The base path of the host application. Laravel gives basePath(). Symfony gives the project directory.
-     * @param string|null $publishedPath The path of the published prompt file. Null disables this step.
-     * @param string      $defaultPath   The path of the package prompt file.
+     * @param  string  $basePath  The base path of the host application. Laravel gives basePath(). Symfony gives the project directory.
+     * @param  string|null  $publishedPath  The path of the published prompt file. Null disables this step.
+     * @param  string  $defaultPath  The path of the package prompt file.
      */
     public function __construct(
         private string $basePath,
         private ?string $publishedPath = null,
         private string $defaultPath = AiSettings::DEFAULT_INSTRUCTIONS_PATH,
-    ) {
-    }
+    ) {}
 
     /**
      * Return the text of the prompt file. The text is trimmed. The error messages show the resolved path.
      *
-     * @param string|null $path The configured path. A null or blank value selects the published or the default file.
+     * @param  string|null  $path  The configured path. A null or blank value selects the published or the default file.
      *
      * @throws InvalidConfigurationException When the selected file is missing, not readable or empty.
      */

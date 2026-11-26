@@ -32,8 +32,7 @@ final readonly class EffortTask
 
         #[SchemaProperty(description: 'The confidence level of the estimate.')]
         public Confidence $confidence,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{task: string, role: string, estimate_hours: float, confidence: string}
