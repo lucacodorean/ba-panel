@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use Illuminate\Config\Repository;
-use Lucacodorean\BaPanel\Ai\FeasibilityAgent;
-use Lucacodorean\BaPanel\Ai\FeasibilityAgentFactory;
-use Lucacodorean\BaPanel\Ai\ProviderFactory;
-use Lucacodorean\BaPanel\Exceptions\InvalidConfigurationException;
+use Lucacodorean\BaPanel\Core\Ai\FeasibilityAgent;
+use Lucacodorean\BaPanel\Core\Ai\FeasibilityAgentFactory;
+use Lucacodorean\BaPanel\Core\Ai\ProviderFactory;
+use Lucacodorean\BaPanel\Core\Config\AiSettings;
+use Lucacodorean\BaPanel\Core\Exceptions\InvalidConfigurationException;
 use NeuronAI\Providers\Anthropic\Anthropic;
 use NeuronAI\Providers\OpenAI\OpenAI;
 
@@ -15,11 +15,11 @@ use NeuronAI\Providers\OpenAI\OpenAI;
 */
 
 /**
- * Build the factory with a config repository that has the given "ba-panel.ai" value.
+ * Build the factory with the AI settings of the given "ai" config value. A value that is not an array gives empty settings.
  */
 function feasibilityAgentFactory(mixed $ai): FeasibilityAgentFactory
 {
-    return new FeasibilityAgentFactory(new ProviderFactory, new Repository(['ba-panel' => ['ai' => $ai]]));
+    return new FeasibilityAgentFactory(new ProviderFactory, AiSettings::fromArray(is_array($ai) ? $ai : []));
 }
 
 /**
@@ -55,15 +55,28 @@ it('builds a new agent on each call', function (): void {
     expect($factory->make())->not->toBe($factory->make());
 });
 
-it('reads the config on each call', function (): void {
-    $config = new Repository(['ba-panel' => ['ai' => ['provider' => 'openai', 'model' => 'first-model', 'key' => 'secret-key']]]);
-    $factory = new FeasibilityAgentFactory(new ProviderFactory, $config);
+it('builds each agent from the given settings', function (): void {
+    $factory = new FeasibilityAgentFactory(new ProviderFactory, new AiSettings('openai', 'first-model', 'secret-key'));
 
-    $first = $factory->make();
-    $config->set('ba-panel.ai.model', 'second-model');
+    expect($factory->make()->getProvider()->getModel())->toBe('first-model')
+        ->and($factory->make()->getProvider()->getModel())->toBe('first-model');
+});
 
-    expect($first->getProvider()->getModel())->toBe('first-model')
-        ->and($factory->make()->getProvider()->getModel())->toBe('second-model');
+it('builds the agent with the settings of each factory', function (): void {
+    $first = new FeasibilityAgentFactory(new ProviderFactory, new AiSettings('openai', 'first-model', 'secret-key'));
+    $second = new FeasibilityAgentFactory(new ProviderFactory, new AiSettings('anthropic', 'second-model', 'secret-key'));
+
+    expect($first->make()->getProvider())->toBeInstanceOf(OpenAI::class)
+        ->and($second->make()->getProvider())->toBeInstanceOf(Anthropic::class)
+        ->and($second->make()->getProvider()->getModel())->toBe('second-model');
+});
+
+it('throws with every missing AI value when the settings are empty', function (): void {
+    expect(feasibilityAgentFactoryErrors(new FeasibilityAgentFactory(new ProviderFactory, new AiSettings)))->toBe([
+        'BAP_AI_PROVIDER is required to build the AI provider.',
+        'BAP_AI_MODEL is required to build the AI provider.',
+        'BAP_AI_KEY is required to build the AI provider.',
+    ]);
 });
 
 it('throws with every missing AI value', function (mixed $ai): void {
@@ -77,6 +90,7 @@ it('throws with every missing AI value', function (mixed $ai): void {
     'empty array' => [[]],
     'missing key' => [null],
     'not an array' => ['openai'],
+    'values that are not strings' => [['provider' => 1, 'model' => ['gpt'], 'key' => true]],
 ]);
 
 it('throws when one AI value is blank', function (): void {

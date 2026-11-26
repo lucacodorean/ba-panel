@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Markdown\SafeMarkdownConverter;
+use Lucacodorean\BaPanel\Core\Markdown\SafeMarkdownConverter;
 
 it('converts Markdown to HTML', function (): void {
     $html = (new SafeMarkdownConverter)->convert("# Title\n\nSome *text*.\n\n- one\n");

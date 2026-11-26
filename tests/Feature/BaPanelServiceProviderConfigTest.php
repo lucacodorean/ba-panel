@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
-use Lucacodorean\BaPanel\Ai\ProviderFactory;
-use Lucacodorean\BaPanel\BaPanelServiceProvider;
-use Lucacodorean\BaPanel\Exceptions\InvalidConfigurationException;
+use Lucacodorean\BaPanel\Core\Ai\ProviderFactory;
+use Lucacodorean\BaPanel\Core\Exceptions\InvalidConfigurationException;
+use Lucacodorean\BaPanel\Core\View\TemplateRenderer;
+use Lucacodorean\BaPanel\Laravel\BaPanelServiceProvider;
 use Lucacodorean\BaPanel\Tests\Support\TemporaryFilesystem;
 use Lucacodorean\BaPanel\Tests\TestCase;
 
@@ -107,6 +110,64 @@ it('registers the views publish path under the ba-panel-views tag', function ():
     expect(realpath($source))->toBe(realpath(dirname(__DIR__, 2).'/resources/views'))
         ->and($paths[$source])->toBe(resource_path('views/vendor/ba-panel'));
 });
+
+it('publishes the plain PHP templates with the ba-panel-views tag', function (): void {
+    /** @var TestCase $this */
+    $target = resource_path('views/vendor/ba-panel');
+    $package = dirname(__DIR__, 2).'/resources/views';
+
+    try {
+        $this->artisan('vendor:publish', ['--tag' => 'ba-panel-views', '--force' => true])->assertSuccessful();
+
+        expect(is_file($target.'/panel.php'))->toBeTrue()
+            ->and(is_file($target.'/reports/feasibility.php'))->toBeTrue()
+            ->and(file_get_contents($target.'/panel.php'))->toBe(file_get_contents($package.'/panel.php'))
+            ->and(file_get_contents($target.'/reports/feasibility.php'))->toBe(file_get_contents($package.'/reports/feasibility.php'))
+            ->and(glob($target.'/{,*/}*.blade.php', GLOB_BRACE))->toBe([]);
+    } finally {
+        File::deleteDirectory($target);
+    }
+});
+
+it('resolves a published template before the package template', function (): void {
+    /** @var TestCase $this */
+    $target = resource_path('views/vendor/ba-panel');
+
+    try {
+        $this->artisan('vendor:publish', ['--tag' => 'ba-panel-views', '--force' => true])->assertSuccessful();
+
+        $renderer = $this->application()->make(TemplateRenderer::class);
+
+        expect(realpath($renderer->resolve('panel')))->toBe(realpath($target.'/panel.php'))
+            ->and(realpath($renderer->resolve('reports/feasibility')))->toBe(realpath($target.'/reports/feasibility.php'));
+    } finally {
+        File::deleteDirectory($target);
+    }
+});
+
+it('does not load the routes and does not validate the config when disabled', function (): void {
+    /** @var TestCase $this */
+    // The AI and docs values are not valid. The disabled panel does not check them.
+    $this->withBaPanelConfig([
+        'enabled' => false,
+        'ai' => ['provider' => 'ollama', 'model' => null, 'key' => null],
+        'docs' => ['ba-panel-missing-'.bin2hex(random_bytes(4))],
+    ])->rebootApplication();
+
+    expect($this->application()->isBooted())->toBeTrue()
+        ->and(Route::has('ba-panel'))->toBeFalse()
+        ->and(Route::has('ba-panel.feasibility'))->toBeFalse();
+});
+
+it('does not enable the panel for a truthy value that is not true', function (mixed $enabled): void {
+    /** @var TestCase $this */
+    $this->withBaPanelConfig(['enabled' => $enabled, 'docs' => ['ba-panel-missing']])->rebootApplication();
+
+    expect(Route::has('ba-panel'))->toBeFalse();
+})->with([
+    'string true' => ['true'],
+    'integer one' => [1],
+]);
 
 it('throws on boot when enabled with an unsupported provider', function (): void {
     /** @var TestCase $this */

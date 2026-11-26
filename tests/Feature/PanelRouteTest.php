@@ -2,7 +2,14 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
+use Lucacodorean\BaPanel\Core\Feasibility\FeasibilityRequest;
+use Lucacodorean\BaPanel\Core\View\PanelPage;
+use Lucacodorean\BaPanel\Core\View\TemplateRenderer;
+use Lucacodorean\BaPanel\Laravel\Http\Controllers\PanelController;
 use Lucacodorean\BaPanel\Tests\Support\PanelConfig;
 use Lucacodorean\BaPanel\Tests\Support\TemporaryFilesystem;
 use Lucacodorean\BaPanel\Tests\TestCase;
@@ -68,20 +75,105 @@ it('does not register the route with the default config', function (): void {
     $this->get('/ba-panel')->assertNotFound();
 });
 
-it('registers the view namespace even when disabled', function (): void {
+it('resolves the panel template even when disabled', function (): void {
     /** @var TestCase $this */
     $this->withBaPanelConfig(PanelConfig::disabled())->rebootApplication();
 
-    expect(view()->exists('ba-panel::panel'))->toBeTrue();
+    $renderer = $this->application()->make(TemplateRenderer::class);
+
+    expect(realpath($renderer->resolve(PanelPage::TEMPLATE)))->toBe(realpath(dirname(__DIR__, 2).'/resources/views/panel.php'));
 });
 
-it('returns the panel view', function (): void {
+it('returns the panel page as HTML', function (): void {
     /** @var TestCase $this */
     bootEnabledPanel($this);
 
-    $this->get('/ba-panel')
+    $response = $this->get('/ba-panel')
         ->assertOk()
-        ->assertViewIs('ba-panel::panel');
+        ->assertHeader('Content-Type', 'text/html; charset=UTF-8');
+
+    $content = (string) $response->getContent();
+
+    expect($content)->toStartWith('<!DOCTYPE html>')
+        ->and($content)->toContain('</html>')
+        ->and($content)->not->toContain('<?php')
+        ->and($content)->not->toContain('<?=')
+        ->and($content)->not->toContain('{{')
+        ->and($content)->not->toContain('@if');
+});
+
+it('sets the lang attribute from the application locale', function (): void {
+    /** @var TestCase $this */
+    bootEnabledPanel($this);
+    $this->application()->setLocale('pt_BR');
+
+    expect((string) $this->get('/ba-panel')->assertOk()->getContent())->toContain('<html lang="pt-BR">');
+});
+
+it('escapes the locale in the lang attribute', function (): void {
+    /** @var TestCase $this */
+    bootEnabledPanel($this);
+    $this->application()->setLocale('en"><script>');
+
+    $content = (string) $this->get('/ba-panel')->assertOk()->getContent();
+
+    expect($content)->toContain('<html lang="en&quot;&gt;&lt;script&gt;">')
+        ->and($content)->not->toContain('<html lang="en"><script>');
+});
+
+it('sets the message limit on the message input', function (): void {
+    /** @var TestCase $this */
+    bootEnabledPanel($this);
+
+    $content = (string) $this->get('/ba-panel')->assertOk()->getContent();
+
+    expect($content)->toContain('maxlength="'.FeasibilityRequest::MAX_MESSAGE_LENGTH.'"')
+        ->and($content)->toContain('maxlength="5000"')
+        ->and($content)->toContain('var MAX_CONTEXT_FILES = 50;');
+});
+
+it('renders the session token in the CSRF meta tag', function (): void {
+    /** @var TestCase $this */
+    bootEnabledPanel($this);
+
+    $response = $this->get('/ba-panel')->assertOk();
+
+    expect((string) $response->getContent())->toContain('<meta name="csrf-token" content="'.session()->token().'">');
+});
+
+it('does not render the CSRF meta tag when the request has no session', function (): void {
+    /** @var TestCase $this */
+    bootEnabledPanel($this);
+
+    $request = Request::create('/ba-panel');
+    $response = $this->application()->call([$this->application()->make(PanelController::class), 'index'], ['request' => $request]);
+
+    expect($response)->toBeInstanceOf(Response::class)
+        ->and($response->getStatusCode())->toBe(200)
+        ->and((string) $response->getContent())->not->toContain('<meta name="csrf-token"')
+        ->and((string) $response->getContent())->toContain('var csrfHeader = "X-CSRF-TOKEN";');
+});
+
+it('uses a host template that overrides the panel template', function (): void {
+    /** @var TestCase $this */
+    bootEnabledPanel($this);
+
+    $template = resource_path('views/vendor/ba-panel/panel.php');
+    $directory = dirname($template);
+
+    if (! is_dir($directory)) {
+        mkdir($directory, 0777, true);
+    }
+
+    file_put_contents($template, '<p>Host panel <?= $e($csrfHeader) ?> <?= $js($searchUrl) ?></p>');
+
+    try {
+        $this->get('/ba-panel')
+            ->assertOk()
+            ->assertContent('<p>Host panel X-CSRF-TOKEN "\/ba-panel\/search"</p>');
+    } finally {
+        File::deleteDirectory(resource_path('views/vendor/ba-panel'));
+    }
 });
 
 it('renders the panel text', function (): void {

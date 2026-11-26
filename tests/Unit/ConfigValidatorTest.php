@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Ai\ProviderFactory;
-use Lucacodorean\BaPanel\Config\ConfigValidator;
-use Lucacodorean\BaPanel\Exceptions\InvalidConfigurationException;
+use Lucacodorean\BaPanel\Core\Ai\ProviderFactory;
+use Lucacodorean\BaPanel\Core\Config\ConfigValidator;
+use Lucacodorean\BaPanel\Core\Exceptions\InvalidConfigurationException;
 use Lucacodorean\BaPanel\Tests\Support\TemporaryFilesystem;
 
 /**

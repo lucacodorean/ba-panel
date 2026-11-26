@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Graph\Node;
-use Lucacodorean\BaPanel\Search\SearchResult;
+use Lucacodorean\BaPanel\Core\Graph\Node;
+use Lucacodorean\BaPanel\Core\Search\SearchResult;
 
 it('converts the result to the public data with the score rounded to 4 decimals', function (): void {
     $node = new Node('0123456789ab', 'endpoint', 'Endpoint', 'docs/endpoint.md', '/root/docs/endpoint.md');

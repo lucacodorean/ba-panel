@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Graph\FrontMatterParser;
+use Lucacodorean\BaPanel\Core\Graph\FrontMatterParser;
 
 it('returns the metadata and the body', function (): void {
     $result = (new FrontMatterParser)->parse("---\ntitle: Overview\nrelations:\n  - ../api/endpoints.md\n  - getting-started.md\n---\n# Overview\n\nText.\n");

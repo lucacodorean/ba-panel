@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Search\Vectorizer;
+use Lucacodorean\BaPanel\Core\Search\Vectorizer;
 
 it('converts a token into padded character trigrams', function (): void {
     expect((new Vectorizer)->vectorize('api'))->toBe([' ap' => 1, 'api' => 1, 'pi ' => 1]);

@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Ai\FeasibilityAgent;
-use Lucacodorean\BaPanel\Reports\FeasibilityReport;
+use Lucacodorean\BaPanel\Core\Ai\FeasibilityAgent;
+use Lucacodorean\BaPanel\Core\Reports\FeasibilityReport;
 use Lucacodorean\BaPanel\Tests\Support\FeasibilityReportFixture;
 use NeuronAI\Agent\Agent;
 use NeuronAI\Exceptions\AgentException;

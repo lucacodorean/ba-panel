@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Graph\DocumentRenderer;
-use Lucacodorean\BaPanel\Graph\FrontMatterParser;
-use Lucacodorean\BaPanel\Graph\Node;
-use Lucacodorean\BaPanel\Markdown\SafeMarkdownConverter;
+use Lucacodorean\BaPanel\Core\Graph\DocumentRenderer;
+use Lucacodorean\BaPanel\Core\Graph\FrontMatterParser;
+use Lucacodorean\BaPanel\Core\Graph\Node;
+use Lucacodorean\BaPanel\Core\Markdown\SafeMarkdownConverter;
 use Lucacodorean\BaPanel\Tests\Support\TemporaryFilesystem;
 
 /**

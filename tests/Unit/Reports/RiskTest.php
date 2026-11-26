@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Reports\Risk;
+use Lucacodorean\BaPanel\Core\Reports\Risk;
 use NeuronAI\StructuredOutput\Deserializer\Deserializer;
 use NeuronAI\StructuredOutput\Validation\Validator;
 

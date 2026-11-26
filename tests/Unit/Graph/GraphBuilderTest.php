@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Graph\FrontMatterParser;
-use Lucacodorean\BaPanel\Graph\Graph;
-use Lucacodorean\BaPanel\Graph\GraphBuilder;
-use Lucacodorean\BaPanel\Graph\Node;
-use Lucacodorean\BaPanel\Graph\Relationship;
+use Lucacodorean\BaPanel\Core\Graph\FrontMatterParser;
+use Lucacodorean\BaPanel\Core\Graph\Graph;
+use Lucacodorean\BaPanel\Core\Graph\GraphBuilder;
+use Lucacodorean\BaPanel\Core\Graph\Node;
+use Lucacodorean\BaPanel\Core\Graph\Relationship;
 use Lucacodorean\BaPanel\Tests\Support\TemporaryFilesystem;
 
 /**

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Reports\Enums\ReportStatus;
-use Lucacodorean\BaPanel\Reports\PackageVersion;
-use Lucacodorean\BaPanel\Reports\ReportMetadata;
-use Lucacodorean\BaPanel\Reports\ReportMetadataFactory;
+use Lucacodorean\BaPanel\Core\Reports\Enums\ReportStatus;
+use Lucacodorean\BaPanel\Core\Reports\PackageVersion;
+use Lucacodorean\BaPanel\Core\Reports\ReportMetadata;
+use Lucacodorean\BaPanel\Core\Reports\ReportMetadataFactory;
 
 /**
  * Build the metadata factory with the real package version.

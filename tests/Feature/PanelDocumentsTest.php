@@ -98,25 +98,27 @@ it('does not register the document and search routes when disabled', function ()
     $this->get('/ba-panel/search?q=api')->assertNotFound();
 });
 
-it('passes the graph to the panel view', function (): void {
+it('embeds the graph in the panel page', function (): void {
     /** @var TestCase $this */
     bootPanelWithDocuments($this);
 
     $overview = panelDocumentId('docs/guide/overview.md');
+    $graph = [
+        'nodes' => [
+            ['id' => panelDocumentId('docs/api/endpoints.md'), 'name' => 'endpoints', 'title' => 'Endpoints', 'path' => panelDocumentPath('docs/api/endpoints.md')],
+            ['id' => panelDocumentId('docs/guide/getting-started.md'), 'name' => 'getting-started', 'title' => 'Getting started', 'path' => panelDocumentPath('docs/guide/getting-started.md')],
+            ['id' => $overview, 'name' => 'overview', 'title' => 'Architecture overview', 'path' => panelDocumentPath('docs/guide/overview.md')],
+        ],
+        'relationships' => [
+            ['source' => $overview, 'target' => panelDocumentId('docs/api/endpoints.md'), 'bidirectional' => false],
+            ['source' => $overview, 'target' => panelDocumentId('docs/guide/getting-started.md'), 'bidirectional' => false],
+        ],
+    ];
 
-    $this->get('/ba-panel')
-        ->assertOk()
-        ->assertViewHas('graph', [
-            'nodes' => [
-                ['id' => panelDocumentId('docs/api/endpoints.md'), 'name' => 'endpoints', 'title' => 'Endpoints', 'path' => panelDocumentPath('docs/api/endpoints.md')],
-                ['id' => panelDocumentId('docs/guide/getting-started.md'), 'name' => 'getting-started', 'title' => 'Getting started', 'path' => panelDocumentPath('docs/guide/getting-started.md')],
-                ['id' => $overview, 'name' => 'overview', 'title' => 'Architecture overview', 'path' => panelDocumentPath('docs/guide/overview.md')],
-            ],
-            'relationships' => [
-                ['source' => $overview, 'target' => panelDocumentId('docs/api/endpoints.md'), 'bidirectional' => false],
-                ['source' => $overview, 'target' => panelDocumentId('docs/guide/getting-started.md'), 'bidirectional' => false],
-            ],
-        ]);
+    $content = (string) $this->get('/ba-panel')->assertOk()->getContent();
+
+    expect(preg_match('/var data = (.*?);\n/', $content, $matches))->toBe(1)
+        ->and(json_decode($matches[1], true, flags: JSON_THROW_ON_ERROR))->toBe($graph);
 });
 
 it('returns the rendered document with its relations', function (): void {

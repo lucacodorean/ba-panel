@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Lucacodorean\BaPanel\Tests\Support;
 
-use Illuminate\Contracts\Config\Repository;
-use Lucacodorean\BaPanel\Ai\FeasibilityAgent;
-use Lucacodorean\BaPanel\Ai\FeasibilityAgentFactory;
-use Lucacodorean\BaPanel\Ai\ProviderFactory;
+use Lucacodorean\BaPanel\Core\Ai\FeasibilityAgent;
+use Lucacodorean\BaPanel\Core\Ai\FeasibilityAgentFactory;
+use Lucacodorean\BaPanel\Core\Ai\ProviderFactory;
+use Lucacodorean\BaPanel\Core\Config\AiSettings;
 use NeuronAI\Providers\AIProviderInterface;
 
 /**
- * Build each agent with the given test provider. This factory never reads the AI config.
+ * Build each agent with the given test provider. This factory never reads the AI settings.
  * It never builds a real provider, so a test cannot send a request to a real AI provider.
  * The parent class is readonly. Thus this class must also be readonly.
  */
@@ -19,10 +19,10 @@ final readonly class FakeFeasibilityAgentFactory extends FeasibilityAgentFactory
 {
     public function __construct(
         ProviderFactory $providers,
-        Repository $config,
+        AiSettings $settings,
         private AIProviderInterface $provider,
     ) {
-        parent::__construct($providers, $config);
+        parent::__construct($providers, $settings);
     }
 
     /**

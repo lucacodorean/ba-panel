@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
-use Lucacodorean\BaPanel\Ai\FeasibilityAgentFactory;
-use Lucacodorean\BaPanel\Ai\ProviderFactory;
-use Lucacodorean\BaPanel\Exceptions\InvalidConfigurationException;
-use Lucacodorean\BaPanel\Http\Controllers\FeasibilityController;
+use Lucacodorean\BaPanel\Core\Ai\FeasibilityAgentFactory;
+use Lucacodorean\BaPanel\Core\Ai\ProviderFactory;
+use Lucacodorean\BaPanel\Core\Config\AiSettings;
+use Lucacodorean\BaPanel\Core\Exceptions\InvalidConfigurationException;
+use Lucacodorean\BaPanel\Core\Exceptions\InvalidTemplateException;
+use Lucacodorean\BaPanel\Core\Feasibility\FeasibilityRequest;
+use Lucacodorean\BaPanel\Core\Feasibility\FeasibilityService;
+use Lucacodorean\BaPanel\Core\View\TemplateRenderer;
 use Lucacodorean\BaPanel\Tests\Support\FakeFeasibilityAgentFactory;
 use Lucacodorean\BaPanel\Tests\Support\FeasibilityReportFixture;
 use Lucacodorean\BaPanel\Tests\Support\PanelConfig;
@@ -86,7 +91,7 @@ function bindFeasibilityProvider(TestCase $test, FakeAIProvider $provider): Fake
 
     $app->instance(FeasibilityAgentFactory::class, new FakeFeasibilityAgentFactory(
         $app->make(ProviderFactory::class),
-        $app->make(Repository::class),
+        $app->make(AiSettings::class),
         $provider,
     ));
 
@@ -256,7 +261,7 @@ it('accepts the maximum number of context ids', function (): void {
     bootFeasibilityPanel($this);
     bindFeasibilityProvider($this, new FakeAIProvider(FeasibilityReportFixture::message()));
 
-    $context = array_fill(0, FeasibilityController::MAX_CONTEXT_FILES, feasibilityNodeId('docs/billing.md'));
+    $context = array_fill(0, FeasibilityRequest::MAX_CONTEXT_FILES, feasibilityNodeId('docs/billing.md'));
 
     postFeasibility($this, ['message' => 'Request.', 'context' => $context])->assertOk();
 });
@@ -266,7 +271,7 @@ it('accepts a message with the maximum length', function (): void {
     bootFeasibilityPanel($this);
     bindFeasibilityProvider($this, new FakeAIProvider(FeasibilityReportFixture::message()));
 
-    postFeasibility($this, ['message' => str_repeat('é', FeasibilityController::MAX_MESSAGE_LENGTH), 'context' => []])->assertOk();
+    postFeasibility($this, ['message' => str_repeat('é', FeasibilityRequest::MAX_MESSAGE_LENGTH), 'context' => []])->assertOk();
 });
 
 it('accepts an empty or missing context', function (array $payload): void {
@@ -342,6 +347,7 @@ it('refuses an invalid request with 422', function (array $payload, string $mess
     'path as id' => [['message' => 'Request.', 'context' => ['../../etc/passwd']], 'The context contains an invalid file id.'],
     'number as id' => [['message' => 'Request.', 'context' => [123456789012]], 'The context contains an invalid file id.'],
     'list as id' => [['message' => 'Request.', 'context' => [['aaaaaaaaaaaa']]], 'The context contains an invalid file id.'],
+    'context is null' => [['message' => 'Request.', 'context' => null], 'The context must be a list of file ids.'],
     'unknown id' => [['message' => 'Request.', 'context' => ['ffffffffffff']], 'The context contains an unknown file id: ffffffffffff.'],
 ]);
 
@@ -370,6 +376,31 @@ it('returns 503 when the AI provider is not configured', function (): void {
     Exceptions::assertReported(InvalidConfigurationException::class);
 });
 
+it('reads the AI config of the current request after boot', function (): void {
+    /** @var TestCase $this */
+    bootFeasibilityPanel($this);
+    useRealFeasibilityAgentFactory($this);
+
+    // The config is valid at boot. The change after boot applies to the next agent.
+    $this->application()->make(Repository::class)->set('ba-panel.ai.key', null);
+
+    postFeasibility($this, ['message' => 'Request.'])
+        ->assertServiceUnavailable()
+        ->assertExactJson(['message' => FeasibilityService::AI_NOT_CONFIGURED]);
+});
+
+it('does not send the configuration errors in the 503 response', function (): void {
+    /** @var TestCase $this */
+    bootFeasibilityPanel($this);
+    useRealFeasibilityAgentFactory($this);
+    $this->application()->make(Repository::class)->set('ba-panel.ai', ['provider' => null, 'model' => null, 'key' => null]);
+
+    $content = (string) postFeasibility($this, ['message' => 'Request.'])->assertServiceUnavailable()->getContent();
+
+    expect($content)->not->toContain('BAP_AI_')
+        ->and(json_decode($content, true))->toBe(['message' => FeasibilityService::AI_NOT_CONFIGURED]);
+});
+
 it('returns 503 when the AI provider is not supported', function (): void {
     /** @var TestCase $this */
     bootFeasibilityPanel($this);
@@ -388,6 +419,63 @@ it('validates the request before it builds the agent', function (): void {
     $this->application()->make(Repository::class)->set('ba-panel.ai', ['provider' => null, 'model' => null, 'key' => null]);
 
     postFeasibility($this, ['message' => ''])->assertUnprocessable();
+});
+
+it('uses the public messages of the feasibility service', function (): void {
+    expect(FeasibilityService::AGENT_FAILED)->toBe(FEASIBILITY_AGENT_FAILED)
+        ->and(FeasibilityService::AI_NOT_CONFIGURED)->toBe('The feasibility agent is not configured.')
+        ->and(FeasibilityRequest::MAX_MESSAGE_LENGTH)->toBe(5000)
+        ->and(FeasibilityRequest::MAX_CONTEXT_FILES)->toBe(50);
+});
+
+it('does not report a 422 error to the exception handler', function (): void {
+    /** @var TestCase $this */
+    bootFeasibilityPanel($this);
+
+    postFeasibility($this, ['message' => ''])->assertUnprocessable();
+
+    Exceptions::assertNothingReported();
+});
+
+it('returns 502 and reports the error when the report template fails', function (): void {
+    /** @var TestCase $this */
+    bootFeasibilityPanel($this);
+    bindFeasibilityProvider($this, new FakeAIProvider(FeasibilityReportFixture::message()));
+
+    $template = resource_path('views/vendor/ba-panel/reports/feasibility.php');
+    $directory = dirname($template);
+
+    if (! is_dir($directory)) {
+        mkdir($directory, 0777, true);
+    }
+
+    file_put_contents($template, '<?php throw new RuntimeException("Template failed with secret-detail.");');
+
+    try {
+        $response = postFeasibility($this, ['message' => 'Request.'])
+            ->assertStatus(502)
+            ->assertExactJson(['message' => FEASIBILITY_AGENT_FAILED]);
+
+        expect((string) $response->getContent())->not->toContain('secret-detail');
+        Exceptions::assertReported(static fn (RuntimeException $exception): bool => $exception->getMessage() === 'Template failed with secret-detail.');
+    } finally {
+        File::deleteDirectory(resource_path('views/vendor/ba-panel'));
+    }
+});
+
+it('returns 502 when the report template is missing', function (): void {
+    /** @var TestCase $this */
+    bootFeasibilityPanel($this);
+    bindFeasibilityProvider($this, new FakeAIProvider(FeasibilityReportFixture::message()));
+
+    // The renderer has no package directory, so it cannot find the report template.
+    $this->application()->instance(TemplateRenderer::class, new TemplateRenderer([feasibilityFixtures()?->path('missing') ?? '']));
+
+    postFeasibility($this, ['message' => 'Request.'])
+        ->assertStatus(502)
+        ->assertExactJson(['message' => FEASIBILITY_AGENT_FAILED]);
+
+    Exceptions::assertReported(InvalidTemplateException::class);
 });
 
 it('returns 502 when the provider has no response', function (): void {

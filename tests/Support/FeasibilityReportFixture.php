@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Lucacodorean\BaPanel\Tests\Support;
 
-use Lucacodorean\BaPanel\Reports\FeasibilityReport;
+use Lucacodorean\BaPanel\Core\Reports\FeasibilityReport;
 use NeuronAI\Chat\Messages\AssistantMessage;
 use NeuronAI\StructuredOutput\Deserializer\Deserializer;
 use RuntimeException;

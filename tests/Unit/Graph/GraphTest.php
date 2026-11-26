@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Graph\Graph;
-use Lucacodorean\BaPanel\Graph\Node;
-use Lucacodorean\BaPanel\Graph\Relationship;
+use Lucacodorean\BaPanel\Core\Graph\Graph;
+use Lucacodorean\BaPanel\Core\Graph\Node;
+use Lucacodorean\BaPanel\Core\Graph\Relationship;
 
 /**
  * Create a node with values derived from the name.

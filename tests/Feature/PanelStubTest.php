@@ -2,11 +2,23 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Js;
-use Lucacodorean\BaPanel\Graph\GraphBuilder;
+use Lucacodorean\BaPanel\Core\Graph\GraphBuilder;
 use Lucacodorean\BaPanel\Tests\Support\PanelConfig;
 use Lucacodorean\BaPanel\Tests\Support\TemporaryFilesystem;
 use Lucacodorean\BaPanel\Tests\TestCase;
+
+/**
+ * The JSON flags of the $js template helper. The output is safe in a <script> block.
+ */
+const PANEL_STUB_JSON_FLAGS = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR;
+
+/**
+ * Encode the value as the panel template does in a <script> block.
+ */
+function panelStubJs(mixed $value): string
+{
+    return json_encode($value, PANEL_STUB_JSON_FLAGS);
+}
 
 /**
  * Return the temporary filesystem for the current test. Create it on first use.
@@ -190,7 +202,7 @@ it('counts a mutually declared pair as one link', function (): void {
 
     expect($content)->toContain('<span data-file-count>3</span> files · <span data-link-count>2</span> links')
         ->and($graph['relationships'])->toHaveCount(2)
-        ->and($content)->toContain('var data = '.Js::from($graph).';');
+        ->and($content)->toContain('var data = '.panelStubJs($graph).';');
 });
 
 it('embeds the bidirectional flag of each relationship', function (): void {
@@ -206,7 +218,7 @@ it('embeds the bidirectional flag of each relationship', function (): void {
     $flags = array_column($graph['relationships'], 'bidirectional');
 
     expect($flags)->toBe([true, false])
-        ->and($content)->toContain('var data = '.Js::from($graph).';');
+        ->and($content)->toContain('var data = '.panelStubJs($graph).';');
 });
 
 it('shows zero counts for an empty graph', function (): void {
@@ -216,21 +228,21 @@ it('shows zero counts for an empty graph', function (): void {
     expect($content)->toContain('<span data-file-count>0</span> files · <span data-link-count>0</span> links');
 });
 
-it('embeds the graph data with Js::from', function (): void {
+it('embeds the graph data as script-safe JSON', function (): void {
     /** @var TestCase $this */
     $content = panelStubWithDocuments($this);
 
     $graph = app(GraphBuilder::class)->build()->toArray();
 
     expect($graph['nodes'])->toHaveCount(3)
-        ->and($content)->toContain('var data = '.Js::from($graph).';');
+        ->and($content)->toContain('var data = '.panelStubJs($graph).';');
 });
 
 it('embeds an empty graph when there are no documents', function (): void {
     /** @var TestCase $this */
     $content = panelStubWithoutDocuments($this);
 
-    expect($content)->toContain('var data = '.Js::from(['nodes' => [], 'relationships' => []]).';');
+    expect($content)->toContain('var data = '.panelStubJs(['nodes' => [], 'relationships' => []]).';');
 });
 
 it('embeds the document and search endpoint urls', function (): void {
@@ -238,18 +250,18 @@ it('embeds the document and search endpoint urls', function (): void {
     $content = panelStubWithDocuments($this);
 
     expect($content)
-        ->toContain('var documentUrlTemplate = '.Js::from(route('ba-panel.documents', ['node' => '000000000000'], false)).';')
-        ->toContain('var searchUrl = '.Js::from(route('ba-panel.search', [], false)).';')
-        ->toContain("var documentUrlTemplate = '\\/ba-panel\\/documents\\/000000000000';")
-        ->toContain("var searchUrl = '\\/ba-panel\\/search';");
+        ->toContain('var documentUrlTemplate = '.panelStubJs(route('ba-panel.documents', ['node' => '000000000000'], false)).';')
+        ->toContain('var searchUrl = '.panelStubJs(route('ba-panel.search', [], false)).';')
+        ->toContain('var documentUrlTemplate = "\\/ba-panel\\/documents\\/000000000000";')
+        ->toContain('var searchUrl = "\\/ba-panel\\/search";');
 });
 
 it('does not embed absolute urls for the document and search endpoints', function (): void {
     /** @var TestCase $this */
     $content = panelStubWithDocuments($this);
 
-    expect($content)->not->toContain((string) Js::from(route('ba-panel.documents', ['node' => '000000000000'])))
-        ->and($content)->not->toContain((string) Js::from(route('ba-panel.search')))
+    expect($content)->not->toContain(panelStubJs(route('ba-panel.documents', ['node' => '000000000000'])))
+        ->and($content)->not->toContain(panelStubJs(route('ba-panel.search')))
         ->and(preg_match('#https?:(\\\\?/){2}[^"\'\s]*ba-panel(\\\\?/)(documents|search)#i', $content))->toBe(0);
 });
 
@@ -352,8 +364,9 @@ it('sends the CSRF token and the context ids to the feasibility route', function
     /** @var TestCase $this */
     $content = panelStubWithDocuments($this);
 
-    expect($content)->toContain("headers['X-CSRF-TOKEN'] = csrfMeta.content;")
-        ->and($content)->toContain('var feasibilityUrl = '.Js::from(route('ba-panel.feasibility', [], false)).';');
+    expect($content)->toContain('var csrfHeader = "X-CSRF-TOKEN";')
+        ->and($content)->toContain('headers[csrfHeader] = csrfMeta.content;')
+        ->and($content)->toContain('var feasibilityUrl = '.panelStubJs(route('ba-panel.feasibility', [], false)).';');
 });
 
 it('connects the search input to the hidden results list', function (): void {

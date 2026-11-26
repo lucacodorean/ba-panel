@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Reports\Enums\Priority;
-use Lucacodorean\BaPanel\Reports\MarkdownText;
+use Lucacodorean\BaPanel\Core\Reports\Enums\Priority;
+use Lucacodorean\BaPanel\Core\Reports\MarkdownText;
 
 it('escapes the pipe character in a cell', function (): void {
     expect(MarkdownText::cell('a | b|c'))->toBe('a \| b\|c');

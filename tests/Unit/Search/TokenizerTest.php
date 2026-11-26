@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Search\Tokenizer;
+use Lucacodorean\BaPanel\Core\Search\Tokenizer;
 
 it('splits on separators and camelCase boundaries in lowercase', function (): void {
     expect((new Tokenizer)->tokenize('dataModel APIClient getting-started_v2'))
