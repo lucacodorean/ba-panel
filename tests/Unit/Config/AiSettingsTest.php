@@ -60,3 +60,59 @@ it('returns the same values after a round trip', function (): void {
 
     expect(AiSettings::fromArray($settings->toArray()))->toEqual($settings);
 });
+
+it('has a default prompt path in the package', function (): void {
+    expect(realpath(AiSettings::DEFAULT_INSTRUCTIONS_PATH))->toBe(realpath(dirname(__DIR__, 3).'/resources/prompts/feasibility.md'))
+        ->and(AiSettings::DEFAULT_INSTRUCTIONS_PATH)->toBeFile();
+});
+
+it('has no prompt path by default', function (): void {
+    $settings = new AiSettings;
+
+    expect($settings->instructionsPath)->toBeNull()
+        ->and($settings->instructionsPath())->toBeNull();
+});
+
+it('gives no prompt path for a null or blank value', function (?string $path): void {
+    // PromptLoader selects the published or the default prompt file for a null value.
+    expect((new AiSettings(instructionsPath: $path))->instructionsPath())->toBeNull();
+})->with([
+    'null' => [null],
+    'empty' => [''],
+    'spaces' => ['   '],
+    'tabs and new lines' => ["\t\n"],
+]);
+
+it('gives no prompt path when the config key is missing or not a string', function (array $ai): void {
+    $settings = AiSettings::fromArray($ai);
+
+    expect($settings->instructionsPath)->toBeNull()
+        ->and($settings->instructionsPath())->toBeNull();
+})->with([
+    'missing key' => [['provider' => 'openai']],
+    'null' => [['instructions_path' => null]],
+    'integer' => [['instructions_path' => 1]],
+    'list' => [['instructions_path' => ['prompt.md']]],
+]);
+
+it('reads the prompt path from the AI config array as given', function (string $path): void {
+    $settings = AiSettings::fromArray(['provider' => 'openai', 'instructions_path' => $path]);
+
+    expect($settings->instructionsPath)->toBe($path)
+        ->and($settings->instructionsPath())->toBe($path);
+})->with([
+    'absolute' => ['/var/prompts/feasibility.md'],
+    'relative' => ['resources/prompts/vendor/ba-panel/feasibility.md'],
+    'windows' => ['C:\\prompts\\feasibility.md'],
+    'surrounding spaces' => [' prompts/feasibility.md '],
+]);
+
+it('keeps the configured prompt path from the constructor', function (): void {
+    expect((new AiSettings('openai', 'gpt-test', 'secret-key', '/var/prompts/custom.md'))->instructionsPath())
+        ->toBe('/var/prompts/custom.md');
+});
+
+it('does not add the prompt path to the provider array', function (): void {
+    expect(AiSettings::fromArray(['provider' => 'openai', 'model' => 'gpt-test', 'key' => 'secret-key', 'instructions_path' => '/var/prompt.md'])->toArray())
+        ->toBe(['provider' => 'openai', 'model' => 'gpt-test', 'key' => 'secret-key']);
+});

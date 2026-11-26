@@ -24,8 +24,7 @@ final readonly class ReportMetadataFactory
 
     public function __construct(
         private PackageVersion $version,
-    ) {
-    }
+    ) {}
 
     /**
      * Create the metadata of a new draft report. All dates are the given time, in ISO-8601 format.
@@ -33,7 +32,7 @@ final readonly class ReportMetadataFactory
      */
     public function create(?DateTimeImmutable $now = null): ReportMetadata
     {
-        $now ??= new DateTimeImmutable();
+        $now ??= new DateTimeImmutable;
         $timestamp = $now->format(DateTimeInterface::ATOM);
 
         return new ReportMetadata(

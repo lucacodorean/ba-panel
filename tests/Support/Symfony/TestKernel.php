@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Lucacodorean\BaPanel\Tests\Support\Symfony;
 
 use Lucacodorean\BaPanel\Core\Ai\FeasibilityAgentFactory;
+use Lucacodorean\BaPanel\Core\Ai\PromptLoader;
 use Lucacodorean\BaPanel\Core\Config\AiSettings;
 use Lucacodorean\BaPanel\Core\Graph\GraphBuilder;
 use Lucacodorean\BaPanel\Core\View\TemplateRenderer;
@@ -33,6 +34,8 @@ final class TestKernel extends Kernel
     public const string AI_SETTINGS = 'test.ba_panel.ai_settings';
 
     public const string GRAPH_BUILDER = 'test.ba_panel.graph_builder';
+
+    public const string PROMPTS = 'test.ba_panel.prompts';
 
     public const string RENDERER = 'test.ba_panel.renderer';
 
@@ -115,6 +118,7 @@ final class TestKernel extends Kernel
         $services->alias(self::AGENTS, FeasibilityAgentFactory::class)->public();
         $services->alias(self::AI_SETTINGS, AiSettings::class)->public();
         $services->alias(self::GRAPH_BUILDER, GraphBuilder::class)->public();
+        $services->alias(self::PROMPTS, PromptLoader::class)->public();
         $services->alias(self::RENDERER, TemplateRenderer::class)->public();
     }
 

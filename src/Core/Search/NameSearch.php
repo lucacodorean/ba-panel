@@ -22,8 +22,7 @@ final readonly class NameSearch
         private Tokenizer $tokenizer,
         private Vectorizer $vectorizer,
         private float $threshold = self::THRESHOLD,
-    ) {
-    }
+    ) {}
 
     public function threshold(): float
     {
@@ -64,9 +63,9 @@ final readonly class NameSearch
     /**
      * Return the average, over the query tokens, of the best similarity against the name tokens.
      *
-     * @param non-empty-list<string> $queryTokens
-     * @param list<array<string, int>> $queryVectors
-     * @param list<string> $nameTokens
+     * @param  non-empty-list<string>  $queryTokens
+     * @param  list<array<string, int>>  $queryVectors
+     * @param  list<string>  $nameTokens
      */
     private function score(array $queryTokens, array $queryVectors, array $nameTokens): float
     {

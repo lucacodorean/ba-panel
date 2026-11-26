@@ -95,7 +95,7 @@ final readonly class ProviderFactory
      *
      * Expected shape: array{provider?: ?string, model?: ?string, key?: ?string}.
      *
-     * @param array<mixed> $ai
+     * @param  array<mixed>  $ai
      *
      * @throws InvalidConfigurationException
      */

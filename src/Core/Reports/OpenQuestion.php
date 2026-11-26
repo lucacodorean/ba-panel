@@ -29,8 +29,7 @@ final readonly class OpenQuestion
 
         #[SchemaProperty(description: 'The status of the question. Use "Open" for a question that has no answer yet.')]
         public string $status,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{question: string, addressed_to: string, blocking: bool, status: string}

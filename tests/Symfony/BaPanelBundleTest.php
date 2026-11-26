@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Lucacodorean\BaPanel\Core\Ai\FeasibilityAgentFactory;
+use Lucacodorean\BaPanel\Core\Ai\PromptLoader;
 use Lucacodorean\BaPanel\Core\Config\AiSettings;
 use Lucacodorean\BaPanel\Core\Exceptions\InvalidConfigurationException;
 use Lucacodorean\BaPanel\Core\Graph\GraphBuilder;
@@ -12,6 +13,7 @@ use Lucacodorean\BaPanel\Symfony\Routing\BaPanelRouteLoader;
 use Lucacodorean\BaPanel\Tests\Support\EnvironmentVariables;
 use Lucacodorean\BaPanel\Tests\Support\Symfony\SymfonyPanel;
 use Lucacodorean\BaPanel\Tests\Support\Symfony\TestKernel;
+use NeuronAI\Chat\Messages\ContentBlocks\TextContent;
 use NeuronAI\Providers\Anthropic\Anthropic;
 use NeuronAI\Providers\OpenAI\OpenAI;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
@@ -21,7 +23,7 @@ use Symfony\Component\Routing\RouterInterface;
 | These tests boot a minimal Symfony kernel with the bundle. They never send a request to an AI provider.
 */
 
-const SYMFONY_BAP_ENV = ['BAP_ENABLED', 'BAP_AI_PROVIDER', 'BAP_AI_MODEL', 'BAP_AI_KEY', 'BAP_DOCS_ARRAY'];
+const SYMFONY_BAP_ENV = ['BAP_ENABLED', 'BAP_AI_PROVIDER', 'BAP_AI_MODEL', 'BAP_AI_KEY', 'BAP_AI_INSTRUCTIONS_PATH', 'BAP_DOCS_ARRAY'];
 
 /**
  * Return the environment helper of the current test. Restore the variables and forget the helper when $restore is true.
@@ -75,6 +77,32 @@ function symfonyRouteNames(SymfonyPanel $panel): array
     return array_keys($router->getRouteCollection()->all());
 }
 
+/**
+ * Return the persona block of the agent that the real factory of the panel builds.
+ */
+function symfonyAgentPersona(SymfonyPanel $panel): string
+{
+    $factory = $panel->container()->get(TestKernel::AGENTS);
+
+    expect($factory)->toBeInstanceOf(FeasibilityAgentFactory::class);
+
+    /** @var FeasibilityAgentFactory $factory */
+    $block = $factory->make()->getInstructions()->getContentBlocks()[0] ?? null;
+
+    expect($block)->toBeInstanceOf(TextContent::class);
+
+    /** @var TextContent $block */
+    return $block->content;
+}
+
+/**
+ * Return the trimmed text of the package prompt file.
+ */
+function symfonyPackagePrompt(): string
+{
+    return trim((string) file_get_contents(dirname(__DIR__, 2).'/resources/prompts/feasibility.md'));
+}
+
 afterEach(function (): void {
     symfonyEnvironment(restore: true);
 });
@@ -93,10 +121,13 @@ it('sets the parameters from the config', function (): void {
 
     $container = SymfonyPanel::create($config)->boot()->container();
 
+    // The config has no prompt path. The env default gives null when BAP_AI_INSTRUCTIONS_PATH is not set.
+    $ai = ['provider' => 'openai', 'model' => 'gpt-test', 'key' => 'secret-key', 'instructions_path' => null];
+
     expect($container->getParameter(BaPanelBundle::PARAMETER_ENABLED))->toBeTrue()
-        ->and($container->getParameter(BaPanelBundle::PARAMETER_AI))->toBe($config['ai'])
+        ->and($container->getParameter(BaPanelBundle::PARAMETER_AI))->toBe($ai)
         ->and($container->getParameter(BaPanelBundle::PARAMETER_DOCS))->toBe(['docs'])
-        ->and($container->getParameter(BaPanelBundle::PARAMETER_CONFIG))->toBe($config);
+        ->and($container->getParameter(BaPanelBundle::PARAMETER_CONFIG))->toBe([...$config, 'ai' => $ai]);
 });
 
 it('uses the parameter names of the bundle', function (): void {
@@ -244,7 +275,7 @@ it('reads the env defaults when the host has no config', function (): void {
     $graph = $container->get(TestKernel::GRAPH_BUILDER);
 
     expect($container->getParameter(BaPanelBundle::PARAMETER_ENABLED))->toBeTrue()
-        ->and($container->getParameter(BaPanelBundle::PARAMETER_AI))->toBe(['provider' => 'openai', 'model' => 'gpt-env', 'key' => 'env-key'])
+        ->and($container->getParameter(BaPanelBundle::PARAMETER_AI))->toBe(['provider' => 'openai', 'model' => 'gpt-env', 'key' => 'env-key', 'instructions_path' => null])
         ->and(BaPanelBundle::docsPaths($container->getParameter(BaPanelBundle::PARAMETER_DOCS)))->toBe(['docs'])
         ->and($factory->make()->getProvider())->toBeInstanceOf(OpenAI::class)
         ->and($factory->make()->getProvider()->getModel())->toBe('gpt-env')
@@ -260,7 +291,7 @@ it('is disabled when no env variable is set', function (): void {
     $container = $panel->container();
 
     expect($container->getParameter(BaPanelBundle::PARAMETER_ENABLED))->toBeFalse()
-        ->and($container->getParameter(BaPanelBundle::PARAMETER_AI))->toBe(['provider' => null, 'model' => null, 'key' => null])
+        ->and($container->getParameter(BaPanelBundle::PARAMETER_AI))->toBe(['provider' => null, 'model' => null, 'key' => null, 'instructions_path' => null])
         ->and(BaPanelBundle::docsPaths($container->getParameter(BaPanelBundle::PARAMETER_DOCS)))->toBe([])
         ->and(symfonyRouteNames($panel))->toBe([])
         ->and($panel->get('/ba-panel')->getStatusCode())->toBe(404);
@@ -345,4 +376,100 @@ it('uses the route names and the type of the loader', function (): void {
         ->and(BaPanelRouteLoader::ROUTE_DOCUMENTS)->toBe('ba_panel_documents')
         ->and(BaPanelRouteLoader::ROUTE_SEARCH)->toBe('ba_panel_search')
         ->and(BaPanelRouteLoader::ROUTE_FEASIBILITY)->toBe('ba_panel_feasibility');
+});
+
+it('resolves the prompt loader with the project directory as base path', function (): void {
+    SymfonyPanel::file('docs/a.md', "# A\n");
+    SymfonyPanel::file('prompts/relative.md', "  You are the project persona.\n");
+    $panel = SymfonyPanel::create(SymfonyPanel::enabledConfig())->boot();
+
+    $loader = $panel->container()->get(TestKernel::PROMPTS);
+
+    expect($loader)->toBeInstanceOf(PromptLoader::class);
+
+    /** @var PromptLoader $loader */
+    expect($loader->load('prompts/relative.md'))->toBe('You are the project persona.')
+        ->and($loader->load())->toBe(symfonyPackagePrompt());
+});
+
+it('shows the project directory in the error for a missing relative prompt path', function (): void {
+    SymfonyPanel::file('docs/a.md', "# A\n");
+    $panel = SymfonyPanel::create(SymfonyPanel::enabledConfig())->boot();
+
+    /** @var PromptLoader $loader */
+    $loader = $panel->container()->get(TestKernel::PROMPTS);
+
+    expect(fn () => $loader->load('prompts/missing.md'))->toThrow(
+        InvalidConfigurationException::class,
+        'The prompt file does not exist: '.SymfonyPanel::projectDir().DIRECTORY_SEPARATOR.'prompts/missing.md',
+    );
+});
+
+it('builds the agent with the package prompt when no prompt path is configured', function (): void {
+    SymfonyPanel::file('docs/a.md', "# A\n");
+    $panel = SymfonyPanel::create(SymfonyPanel::enabledConfig(), fakeAgents: false)->boot();
+
+    expect(symfonyAgentPersona($panel))->toBe(symfonyPackagePrompt());
+});
+
+it('accepts the instructions_path config node', function (string $path, string $expected): void {
+    SymfonyPanel::file('docs/a.md', "# A\n");
+    $file = SymfonyPanel::file('prompts/custom.md', 'You are the configured persona.');
+    $value = $path === 'absolute' ? $file : 'prompts/custom.md';
+    $config = SymfonyPanel::enabledConfig(['ai' => ['provider' => 'openai', 'model' => 'gpt-test', 'key' => 'secret-key', 'instructions_path' => $value]]);
+
+    $panel = SymfonyPanel::create($config, fakeAgents: false)->boot();
+
+    /** @var AiSettings $settings */
+    $settings = $panel->container()->get(TestKernel::AI_SETTINGS);
+
+    expect($settings->instructionsPath())->toBe($value)
+        ->and(symfonyAgentPersona($panel))->toBe($expected);
+})->with([
+    'absolute path' => ['absolute', 'You are the configured persona.'],
+    'relative path' => ['relative', 'You are the configured persona.'],
+]);
+
+it('accepts a null instructions_path config node', function (): void {
+    SymfonyPanel::file('docs/a.md', "# A\n");
+    $config = SymfonyPanel::enabledConfig(['ai' => ['provider' => 'openai', 'model' => 'gpt-test', 'key' => 'secret-key', 'instructions_path' => null]]);
+
+    $panel = SymfonyPanel::create($config, fakeAgents: false)->boot();
+
+    expect($panel->container()->getParameter(BaPanelBundle::PARAMETER_AI))->toBe(['provider' => 'openai', 'model' => 'gpt-test', 'key' => 'secret-key', 'instructions_path' => null])
+        ->and(symfonyAgentPersona($panel))->toBe(symfonyPackagePrompt());
+});
+
+it('throws when the configured prompt file does not exist', function (): void {
+    SymfonyPanel::file('docs/a.md', "# A\n");
+    $config = SymfonyPanel::enabledConfig(['ai' => ['provider' => 'openai', 'model' => 'gpt-test', 'key' => 'secret-key', 'instructions_path' => 'prompts/missing.md']]);
+
+    $panel = SymfonyPanel::create($config, fakeAgents: false)->boot();
+
+    /** @var FeasibilityAgentFactory $factory */
+    $factory = $panel->container()->get(TestKernel::AGENTS);
+
+    expect(fn () => $factory->make())->toThrow(
+        InvalidConfigurationException::class,
+        'The prompt file does not exist: '.SymfonyPanel::projectDir().DIRECTORY_SEPARATOR.'prompts/missing.md',
+    );
+});
+
+it('reads the prompt path from BAP_AI_INSTRUCTIONS_PATH', function (): void {
+    SymfonyPanel::file('docs/guide.md', "# Guide\n");
+    SymfonyPanel::file('prompts/env.md', 'You are the env persona.');
+    $env = symfonySetEnvironment([
+        'BAP_ENABLED' => 'true',
+        'BAP_AI_PROVIDER' => 'openai',
+        'BAP_AI_MODEL' => 'gpt-env',
+        'BAP_AI_KEY' => 'env-key',
+        'BAP_AI_INSTRUCTIONS_PATH' => 'prompts/env.md',
+        'BAP_DOCS_ARRAY' => 'docs',
+    ]);
+
+    $panel = SymfonyPanel::create(null, env: $env, fakeAgents: false)->boot();
+
+    expect($panel->container()->getParameter(BaPanelBundle::PARAMETER_AI))
+        ->toBe(['provider' => 'openai', 'model' => 'gpt-env', 'key' => 'env-key', 'instructions_path' => 'prompts/env.md'])
+        ->and(symfonyAgentPersona($panel))->toBe('You are the env persona.');
 });

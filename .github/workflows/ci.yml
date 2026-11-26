@@ -1,0 +1,106 @@
+# CI pipeline. The jobs run in sequence: audit, lint, tests.
+# The PHP settings match the DDEV web container (.ddev/config.yaml).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+# Cancel a run when a newer run starts on the same ref.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The extensions that the locked packages require.
+  PHP_EXTENSIONS: ctype, curl, dom, fileinfo, iconv, json, libxml, mbstring, openssl, phar, simplexml, tokenizer, xml, xmlwriter
+  # DDEV sets no memory limit. PHPStan needs more than the default.
+  PHP_INI_VALUES: memory_limit=-1
+
+jobs:
+  audit:
+    name: Composer audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          ini-values: ${{ env.PHP_INI_VALUES }}
+          coverage: none
+          tools: composer:v2
+
+      # "--locked" reads composer.lock. It does not need an install.
+      - name: Audit composer.lock
+        run: composer audit --locked --no-interaction
+
+  lint:
+    name: Pint and PHPStan
+    needs: audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          ini-values: ${{ env.PHP_INI_VALUES }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Get the Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-8.4-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-8.4-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Pint
+        run: vendor/bin/pint --test
+
+      # PHPStan reads phpstan.neon, the same as "ddev exec phpstan".
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse --no-progress
+
+  tests:
+    name: Pest
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          ini-values: ${{ env.PHP_INI_VALUES }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Get the Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-8.4-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-8.4-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Pest
+        run: vendor/bin/pest

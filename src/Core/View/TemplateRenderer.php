@@ -38,16 +38,14 @@ final readonly class TemplateRenderer
     private const string TRAILING_SEPARATORS = '/\\';
 
     /**
-     * @param list<string> $directories The template directories, in search order.
+     * @param  list<string>  $directories  The template directories, in search order.
      */
-    public function __construct(private array $directories)
-    {
-    }
+    public function __construct(private array $directories) {}
 
     /**
      * Return the output of the template. The data keys become variables. A key does not replace a helper.
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      *
      * @throws InvalidTemplateException When the name is not valid or no directory contains the template.
      * @throws Throwable When the template fails. The output of the template is discarded.
@@ -97,7 +95,7 @@ final readonly class TemplateRenderer
     /**
      * Include the template in an isolated scope. The scope has no $this and no variables of the renderer.
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     private static function evaluate(string $path, array $data, Closure $e, Closure $js): void
     {

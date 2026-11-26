@@ -22,8 +22,7 @@ final readonly class NonFunctionalImpact
 
         #[SchemaProperty(description: 'The reason for the impact level. Write "Not specified in the documentation" when the documentation does not support an assessment.')]
         public string $details,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{level: string, details: string}

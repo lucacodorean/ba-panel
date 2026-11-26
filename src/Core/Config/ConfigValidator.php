@@ -62,9 +62,7 @@ final readonly class ConfigValidator
         self::CONFIG_KEY => self::ENV_AI_KEY,
     ];
 
-    public function __construct(private string $basePath)
-    {
-    }
+    public function __construct(private string $basePath) {}
 
     /**
      * Validate the configuration. Collect all errors, then throw one exception.
@@ -72,7 +70,7 @@ final readonly class ConfigValidator
      * Expected shape: array{enabled?: bool, ai?: array{provider?: ?string, model?: ?string, key?: ?string}, docs?: list<string>}.
      * Values are checked at runtime, so the type is kept loose.
      *
-     * @param array<string, mixed> $config
+     * @param  array<string, mixed>  $config
      *
      * @throws InvalidConfigurationException
      */

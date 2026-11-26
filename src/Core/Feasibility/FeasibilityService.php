@@ -18,14 +18,15 @@ use Throwable;
  *
  * The shells map the exceptions to HTTP statuses:
  * - InvalidFeasibilityRequestException: 422 with the exception message.
- * - InvalidConfigurationException: 503 with AI_NOT_CONFIGURED.
+ * - InvalidConfigurationException: 503 with AI_NOT_CONFIGURED. The AI provider is not configured,
+ *   or the prompt file is missing, not readable or empty.
  * - Any other Throwable: 502 with AGENT_FAILED.
  * The shells report the 5xx exceptions and never show the exception details. The details can contain provider data.
  */
 final readonly class FeasibilityService
 {
     /**
-     * The public message when the AI provider is not configured.
+     * The public message when the AI provider is not configured or the prompt file is not valid.
      */
     public const string AI_NOT_CONFIGURED = 'The feasibility agent is not configured.';
 
@@ -40,8 +41,7 @@ final readonly class FeasibilityService
         private FeasibilityAssessor $assessor,
         private TemplateRenderer $renderer,
         private SafeMarkdownConverter $converter,
-    ) {
-    }
+    ) {}
 
     /**
      * Return the report of the request as an array, as Markdown, and as safe HTML.
@@ -51,7 +51,8 @@ final readonly class FeasibilityService
      * @return array{report: array<string, mixed>, markdown: string, html: string}
      *
      * @throws InvalidFeasibilityRequestException When the input is not valid.
-     * @throws InvalidConfigurationException When the AI provider is not configured.
+     * @throws InvalidConfigurationException When the AI provider is not configured,
+     *                                       or the prompt file is missing, not readable or empty.
      * @throws Throwable When the agent fails.
      */
     public function assess(mixed $message, mixed $context): array

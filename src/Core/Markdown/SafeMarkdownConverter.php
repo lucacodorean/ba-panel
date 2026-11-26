@@ -32,8 +32,8 @@ final readonly class SafeMarkdownConverter
     public function __construct()
     {
         $environment = new Environment(self::CONVERTER_CONFIG);
-        $environment->addExtension(new CommonMarkCoreExtension());
-        $environment->addExtension(new TableExtension());
+        $environment->addExtension(new CommonMarkCoreExtension);
+        $environment->addExtension(new TableExtension);
 
         $this->converter = new MarkdownConverter($environment);
     }

@@ -53,7 +53,7 @@ final readonly class PanelController
      */
     public function show(string $node, PanelService $panel): JsonResponse
     {
-        return new JsonResponse($panel->document($node) ?? throw new NotFoundHttpException());
+        return new JsonResponse($panel->document($node) ?? throw new NotFoundHttpException);
     }
 
     /**

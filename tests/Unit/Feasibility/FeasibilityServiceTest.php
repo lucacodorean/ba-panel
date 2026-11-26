@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Lucacodorean\BaPanel\Core\Ai\FeasibilityAgentFactory;
 use Lucacodorean\BaPanel\Core\Ai\FeasibilityAssessor;
+use Lucacodorean\BaPanel\Core\Ai\PromptLoader;
 use Lucacodorean\BaPanel\Core\Ai\ProviderFactory;
 use Lucacodorean\BaPanel\Core\Config\AiSettings;
 use Lucacodorean\BaPanel\Core\Exceptions\InvalidConfigurationException;
@@ -74,7 +75,7 @@ function feasibilityService(FeasibilityAgentFactory $agents, ?array $templates =
  */
 function feasibilityServiceAgents(FakeAIProvider $provider): FeasibilityAgentFactory
 {
-    return new FakeFeasibilityAgentFactory(new ProviderFactory, new AiSettings, $provider);
+    return new FakeFeasibilityAgentFactory(new ProviderFactory, new AiSettings, new PromptLoader(dirname(__DIR__, 3)), $provider);
 }
 
 /**
@@ -167,7 +168,7 @@ it('escapes raw HTML of the report in the HTML', function (): void {
 
 it('validates the input before it builds the agent', function (mixed $message, mixed $context): void {
     // The real factory with empty settings throws on make(). The validation error comes first.
-    $service = feasibilityService(new FeasibilityAgentFactory(new ProviderFactory, new AiSettings));
+    $service = feasibilityService(new FeasibilityAgentFactory(new ProviderFactory, new AiSettings, new PromptLoader(dirname(__DIR__, 3))));
 
     expect(fn () => $service->assess($message, $context))->toThrow(InvalidFeasibilityRequestException::class);
 })->with([
@@ -185,7 +186,7 @@ it('does not send an invalid request to the provider', function (): void {
 });
 
 it('throws the configuration error of the agent factory', function (): void {
-    $service = feasibilityService(new FeasibilityAgentFactory(new ProviderFactory, new AiSettings));
+    $service = feasibilityService(new FeasibilityAgentFactory(new ProviderFactory, new AiSettings, new PromptLoader(dirname(__DIR__, 3))));
 
     expect(fn () => $service->assess('Request.', []))->toThrow(InvalidConfigurationException::class);
 });

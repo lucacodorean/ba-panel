@@ -9,6 +9,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use Lucacodorean\BaPanel\Core\Ai\FeasibilityAgent;
 use Lucacodorean\BaPanel\Core\Ai\FeasibilityAgentFactory;
+use Lucacodorean\BaPanel\Core\Ai\PromptLoader;
 use Lucacodorean\BaPanel\Core\Ai\ProviderFactory;
 use Lucacodorean\BaPanel\Core\Config\AiSettings;
 use Lucacodorean\BaPanel\Core\Config\ConfigValidator;
@@ -21,11 +22,23 @@ use Lucacodorean\BaPanel\Core\View\TemplateRenderer;
  */
 final class BaPanelServiceProvider extends ServiceProvider
 {
-    private const string CONFIG_PATH = __DIR__ . '/../../config/ba-panel.php';
+    private const string CONFIG_PATH = __DIR__.'/../../config/ba-panel.php';
 
-    private const string VIEWS_PATH = __DIR__ . '/../../resources/views';
+    private const string VIEWS_PATH = __DIR__.'/../../resources/views';
 
-    private const string ROUTES_PATH = __DIR__ . '/../../routes/laravel.php';
+    private const string PROMPTS_PATH = __DIR__.'/../../resources/prompts';
+
+    /**
+     * The host directory for the published prompt files.
+     */
+    private const string HOST_PROMPTS_PATH = 'prompts/vendor/ba-panel';
+
+    /**
+     * The file name of the feasibility prompt. The published copy has the same name.
+     */
+    private const string FEASIBILITY_PROMPT_FILE = 'feasibility.md';
+
+    private const string ROUTES_PATH = __DIR__.'/../../routes/laravel.php';
 
     /**
      * The host directory for the published templates. A template in this directory overrides the package template.
@@ -46,6 +59,13 @@ final class BaPanelServiceProvider extends ServiceProvider
 
         // The bindings are lazy. The container builds nothing until a class asks for the agent.
         $this->app->singleton(ProviderFactory::class);
+        $this->app->singleton(PromptLoader::class, static function (Application $app): PromptLoader {
+            // The published path is the target of the "ba-panel-prompts" publish tag.
+            return new PromptLoader(
+                $app->basePath(),
+                $app->resourcePath(self::HOST_PROMPTS_PATH.'/'.self::FEASIBILITY_PROMPT_FILE),
+            );
+        });
 
         // The settings are read from the config on each resolution. A config change applies to the next agent.
         $this->app->bind(AiSettings::class, static function (Application $app): AiSettings {
@@ -90,6 +110,10 @@ final class BaPanelServiceProvider extends ServiceProvider
         $this->publishes([
             self::VIEWS_PATH => $this->app->resourcePath(self::HOST_VIEWS_PATH),
         ], 'ba-panel-views');
+
+        $this->publishes([
+            self::PROMPTS_PATH => $this->app->resourcePath(self::HOST_PROMPTS_PATH),
+        ], 'ba-panel-prompts');
 
         $config = $this->app->make(Repository::class);
 

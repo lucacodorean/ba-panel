@@ -21,10 +21,10 @@ final readonly class PanelPage
     public const string DEFAULT_LOCALE = 'en';
 
     /**
-     * @param array{nodes: list<array<string, mixed>>, relationships: list<array<string, mixed>>} $graph
-     * @param string $documentUrlTemplate The document URL with DOCUMENT_ID_PLACEHOLDER as the node id.
-     * @param ?string $csrfToken The CSRF token. Null when the host has no CSRF protection.
-     * @param string $csrfHeader The request header that sends the CSRF token.
+     * @param  array{nodes: list<array<string, mixed>>, relationships: list<array<string, mixed>>}  $graph
+     * @param  string  $documentUrlTemplate  The document URL with DOCUMENT_ID_PLACEHOLDER as the node id.
+     * @param  ?string  $csrfToken  The CSRF token. Null when the host has no CSRF protection.
+     * @param  string  $csrfHeader  The request header that sends the CSRF token.
      */
     public function __construct(
         public array $graph,
@@ -36,8 +36,7 @@ final readonly class PanelPage
         public string $locale = self::DEFAULT_LOCALE,
         public int $maxMessageLength = FeasibilityRequest::MAX_MESSAGE_LENGTH,
         public int $maxContextFiles = FeasibilityRequest::MAX_CONTEXT_FILES,
-    ) {
-    }
+    ) {}
 
     /**
      * Return the template variables.

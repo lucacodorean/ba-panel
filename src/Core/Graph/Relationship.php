@@ -11,16 +11,15 @@ namespace Lucacodorean\BaPanel\Core\Graph;
 final readonly class Relationship
 {
     /**
-     * @param Node $source The document of the first declaration.
-     * @param Node $target The declared document.
-     * @param bool $bidirectional True when the target also declares the source.
+     * @param  Node  $source  The document of the first declaration.
+     * @param  Node  $target  The declared document.
+     * @param  bool  $bidirectional  True when the target also declares the source.
      */
     public function __construct(
         private Node $source,
         private Node $target,
         private bool $bidirectional = false,
-    ) {
-    }
+    ) {}
 
     /**
      * Return the document that declares the link. For a bidirectional link, this is the first declaration.

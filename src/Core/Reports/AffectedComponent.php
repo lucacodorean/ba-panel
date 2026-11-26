@@ -35,8 +35,7 @@ final readonly class AffectedComponent
 
         #[SchemaProperty(description: 'The team or person that owns the component. Write "Not specified" when the documentation does not name an owner.')]
         public string $owner,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{component: string, layer: string, change_type: string, impact: string, owner: string}

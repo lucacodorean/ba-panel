@@ -10,11 +10,11 @@ namespace Lucacodorean\BaPanel\Core\Graph;
 final readonly class Node
 {
     /**
-     * @param string $id The first 12 hex characters of sha1(realpath).
-     * @param string $name The file name without the extension.
-     * @param string $title The front matter title, the first heading, or the name.
-     * @param string $path The display path. It is relative to the base path when possible.
-     * @param string $absolutePath The real path on disk. Do not send it to the browser.
+     * @param  string  $id  The first 12 hex characters of sha1(realpath).
+     * @param  string  $name  The file name without the extension.
+     * @param  string  $title  The front matter title, the first heading, or the name.
+     * @param  string  $path  The display path. It is relative to the base path when possible.
+     * @param  string  $absolutePath  The real path on disk. Do not send it to the browser.
      */
     public function __construct(
         public string $id,
@@ -22,8 +22,7 @@ final readonly class Node
         public string $title,
         public string $path,
         public string $absolutePath,
-    ) {
-    }
+    ) {}
 
     /**
      * Return the public data. The absolute path is not included.

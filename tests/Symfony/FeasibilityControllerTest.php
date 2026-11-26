@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Lucacodorean\BaPanel\Core\Ai\FeasibilityAgentFactory;
+use Lucacodorean\BaPanel\Core\Ai\PromptLoader;
 use Lucacodorean\BaPanel\Core\Ai\ProviderFactory;
 use Lucacodorean\BaPanel\Core\Config\AiSettings;
 use Lucacodorean\BaPanel\Core\Exceptions\InvalidConfigurationException;
@@ -180,7 +181,7 @@ it('refuses a missing or invalid CSRF token with 403', function (?string $token)
 
 it('returns 503 when the AI provider is not configured', function (): void {
     $panel = symfonyFeasibilityPanel();
-    $panel->useAgentFactory(new FeasibilityAgentFactory(new ProviderFactory, new AiSettings));
+    $panel->useAgentFactory(new FeasibilityAgentFactory(new ProviderFactory, new AiSettings, new PromptLoader(SymfonyPanel::projectDir())));
 
     $response = $panel->postFeasibility(['message' => 'Request.']);
 
@@ -195,7 +196,7 @@ it('returns 503 when the AI provider is not configured', function (): void {
 
 it('validates the request before it builds the agent', function (): void {
     $panel = symfonyFeasibilityPanel();
-    $panel->useAgentFactory(new FeasibilityAgentFactory(new ProviderFactory, new AiSettings));
+    $panel->useAgentFactory(new FeasibilityAgentFactory(new ProviderFactory, new AiSettings, new PromptLoader(SymfonyPanel::projectDir())));
 
     symfonyFeasibilityError($panel->postFeasibility(['message' => '']), 422, 'The message is required.');
 });

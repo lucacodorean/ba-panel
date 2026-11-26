@@ -4,8 +4,8 @@
   The helpers are $e (escape for HTML) and $js (encode as JSON for a <script> block).
 */
 
-/** @var \Closure(string|int|float|bool|\Stringable|null): string $e */
-/** @var \Closure(mixed): string $js */
+/** @var Closure(string|int|float|bool|Stringable|null): string $e */
+/** @var Closure(mixed): string $js */
 
 /** The graph data. The controller passes it. Use an empty graph when the value is missing. */
 $graph = isset($graph) && is_array($graph) ? $graph : ['nodes' => [], 'relationships' => []];

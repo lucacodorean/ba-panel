@@ -1,0 +1,7 @@
+{
+    "preset": "laravel",
+    "rules": {
+        "no_alternative_syntax": false,
+        "method_chaining_indentation": false
+    }
+}

@@ -63,7 +63,7 @@ final readonly class MarkdownText
      * Return the items as a Markdown bullet list, one item per line. Return "- None" when no item is given.
      * The indent puts the list inside an other list item.
      *
-     * @param list<string> $items
+     * @param  list<string>  $items
      */
     public static function bullets(array $items, int $indent = 0): string
     {
@@ -81,7 +81,7 @@ final readonly class MarkdownText
      * Return the items as a list inside a bullet, after the bullet label.
      * Return " None" when no item is given. Else return a line break and the items, indented by 2 spaces.
      *
-     * @param list<string> $items
+     * @param  list<string>  $items
      */
     public static function nestedBullets(array $items): string
     {
@@ -91,7 +91,7 @@ final readonly class MarkdownText
     /**
      * Return the items on one line for a Markdown table cell. Return "None" when no item is given.
      *
-     * @param list<string> $items
+     * @param  list<string>  $items
      */
     public static function cellList(array $items): string
     {
@@ -117,7 +117,7 @@ final readonly class MarkdownText
     /**
      * Remove blank items.
      *
-     * @param list<string> $items
+     * @param  list<string>  $items
      * @return list<string>
      */
     private static function filled(array $items): array

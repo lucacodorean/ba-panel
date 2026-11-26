@@ -31,15 +31,14 @@ final readonly class PanelController
     private const string CONTENT_TYPE = 'text/html; charset=UTF-8';
 
     /**
-     * @param ?CsrfTokenManagerInterface $csrf Null when the host has no CSRF token manager.
+     * @param  ?CsrfTokenManagerInterface  $csrf  Null when the host has no CSRF token manager.
      */
     public function __construct(
         private PanelService $panel,
         private TemplateRenderer $renderer,
         private UrlGeneratorInterface $urls,
         private ?CsrfTokenManagerInterface $csrf = null,
-    ) {
-    }
+    ) {}
 
     /**
      * Show the panel with the documentation graph.
@@ -66,7 +65,7 @@ final readonly class PanelController
      */
     public function show(string $node): JsonResponse
     {
-        return new JsonResponse($this->panel->document($node) ?? throw new NotFoundHttpException());
+        return new JsonResponse($this->panel->document($node) ?? throw new NotFoundHttpException);
     }
 
     /**

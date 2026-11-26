@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Lucacodorean\BaPanel\Tests\Support\Symfony;
 
 use Lucacodorean\BaPanel\Core\Ai\FeasibilityAgentFactory;
+use Lucacodorean\BaPanel\Core\Ai\PromptLoader;
 use Lucacodorean\BaPanel\Core\Ai\ProviderFactory;
 use Lucacodorean\BaPanel\Core\Config\AiSettings;
 use Lucacodorean\BaPanel\Tests\Support\FakeFeasibilityAgentFactory;
@@ -20,7 +21,7 @@ use Symfony\Component\HttpFoundation\Response;
  * Boot the test kernel and send requests to it.
  *
  * All panels of one test process share one project directory and one cache root. The cache root is removed at shutdown.
- * Call reset() after each test. It removes the docs and the templates of the project directory.
+ * Call reset() after each test. It removes the docs, the templates and the prompts of the project directory.
  */
 final class SymfonyPanel
 {
@@ -113,7 +114,7 @@ final class SymfonyPanel
             return;
         }
 
-        foreach (['docs', 'templates'] as $directory) {
+        foreach (['docs', 'templates', 'prompts'] as $directory) {
             self::remove(self::projectDir().'/'.$directory);
         }
 
@@ -141,7 +142,7 @@ final class SymfonyPanel
      */
     public function useProvider(FakeAIProvider $provider): FakeAIProvider
     {
-        $this->useAgentFactory(new FakeFeasibilityAgentFactory(new ProviderFactory, new AiSettings, $provider));
+        $this->useAgentFactory(new FakeFeasibilityAgentFactory(new ProviderFactory, new AiSettings, new PromptLoader(self::projectDir()), $provider));
 
         return $provider;
     }

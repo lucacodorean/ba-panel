@@ -24,8 +24,7 @@ final readonly class FeasibilityDimension
         #[SchemaProperty(description: 'The reason for the rating, based only on the documentation.')]
         #[NotBlank]
         public string $justification,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{rating: string, justification: string}

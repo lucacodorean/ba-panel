@@ -6,6 +6,7 @@ namespace Lucacodorean\BaPanel\Symfony;
 
 use Lucacodorean\BaPanel\Core\Ai\FeasibilityAgentFactory;
 use Lucacodorean\BaPanel\Core\Ai\FeasibilityAssessor;
+use Lucacodorean\BaPanel\Core\Ai\PromptLoader;
 use Lucacodorean\BaPanel\Core\Ai\ProviderFactory;
 use Lucacodorean\BaPanel\Core\Config\AiSettings;
 use Lucacodorean\BaPanel\Core\Config\ConfigValidator;
@@ -37,7 +38,7 @@ use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
  * The Symfony composition root of the package. Only loadExtension() and boot() wire services.
  *
  * The defaults read the same environment variables as the Laravel shell: BAP_ENABLED, BAP_AI_PROVIDER, BAP_AI_MODEL,
- * BAP_AI_KEY and BAP_DOCS_ARRAY. The host can set other values in config/packages/ba_panel.yaml.
+ * BAP_AI_KEY, BAP_AI_INSTRUCTIONS_PATH and BAP_DOCS_ARRAY. The host can set other values in config/packages/ba_panel.yaml.
  * The host imports the routes with "resource: '@BaPanelBundle/routes/symfony.yaml'".
  */
 final class BaPanelBundle extends AbstractBundle
@@ -84,12 +85,17 @@ final class BaPanelBundle extends AbstractBundle
                     ->defaultValue('%env(bool:default::BAP_ENABLED)%')
                 ->end()
                 ->arrayNode('ai')
-                    ->info('The AI provider settings. Each value is required when the panel is enabled.')
+                    ->info('The AI provider settings. The provider, the model and the key are required when the panel is enabled.')
                     ->addDefaultsIfNotSet()
                     ->children()
                         ->scalarNode('provider')->defaultValue('%env(default::BAP_AI_PROVIDER)%')->end()
                         ->scalarNode('model')->defaultValue('%env(default::BAP_AI_MODEL)%')->end()
                         ->scalarNode('key')->defaultValue('%env(default::BAP_AI_KEY)%')->end()
+                        // A null value gives the package prompt file. Symfony has no published prompt path. See PromptLoader.
+                        ->scalarNode('instructions_path')
+                            ->info('The prompt file of the feasibility agent. The default is the package prompt file. A relative path resolves against the project directory.')
+                            ->defaultValue('%env(default::BAP_AI_INSTRUCTIONS_PATH)%')
+                        ->end()
                     ->end()
                 ->end()
                 // A variable node, because an array node refuses an env placeholder.
@@ -101,7 +107,7 @@ final class BaPanelBundle extends AbstractBundle
     }
 
     /**
-     * @param array<string, mixed> $config
+     * @param  array<string, mixed>  $config
      */
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
@@ -127,6 +133,8 @@ final class BaPanelBundle extends AbstractBundle
         $services->set(PackageVersion::class);
         $services->set(ReportMetadataFactory::class);
         $services->set(FeasibilityAssessor::class);
+        $services->set(PromptLoader::class)
+            ->args([self::PROJECT_DIR]);
         $services->set(FeasibilityAgentFactory::class);
         $services->set(PanelService::class);
         $services->set(FeasibilityService::class);

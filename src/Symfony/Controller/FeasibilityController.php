@@ -32,14 +32,13 @@ final readonly class FeasibilityController
     private const string LOG_MESSAGE = 'The feasibility agent failed.';
 
     /**
-     * @param ?CsrfTokenManagerInterface $csrf Null when the host has no CSRF token manager. Then the CSRF check is off.
+     * @param  ?CsrfTokenManagerInterface  $csrf  Null when the host has no CSRF token manager. Then the CSRF check is off.
      */
     public function __construct(
         private FeasibilityService $feasibility,
         private LoggerInterface $logger,
         private ?CsrfTokenManagerInterface $csrf = null,
-    ) {
-    }
+    ) {}
 
     /**
      * Return the report of the request as an array, as Markdown, and as safe HTML.
@@ -47,7 +46,7 @@ final readonly class FeasibilityController
      * Request: {"message": string, "context": list<string>}. Each context item is a node id.
      * Response 200: {"report": array, "markdown": string, "html": string}.
      * Errors: {"message": string} with 403 for an invalid CSRF token, 422 for an invalid request,
-     * 503 when the AI is not configured, 502 when the agent fails.
+     * 503 when the AI is not configured or the prompt file is not valid, 502 when the agent fails.
      */
     public function assess(Request $request): JsonResponse
     {
