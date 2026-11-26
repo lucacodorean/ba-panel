@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Lucacodorean\BaPanel\Tests;
 
 use Illuminate\Foundation\Application;
-use Lucacodorean\BaPanel\BaPanelServiceProvider;
+use Lucacodorean\BaPanel\Laravel\BaPanelServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 use RuntimeException;
 

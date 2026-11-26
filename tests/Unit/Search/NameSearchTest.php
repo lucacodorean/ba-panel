@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Graph\Graph;
-use Lucacodorean\BaPanel\Graph\Node;
-use Lucacodorean\BaPanel\Search\NameSearch;
-use Lucacodorean\BaPanel\Search\SearchResult;
-use Lucacodorean\BaPanel\Search\Tokenizer;
-use Lucacodorean\BaPanel\Search\Vectorizer;
+use Lucacodorean\BaPanel\Core\Graph\Graph;
+use Lucacodorean\BaPanel\Core\Graph\Node;
+use Lucacodorean\BaPanel\Core\Search\NameSearch;
+use Lucacodorean\BaPanel\Core\Search\SearchResult;
+use Lucacodorean\BaPanel\Core\Search\Tokenizer;
+use Lucacodorean\BaPanel\Core\Search\Vectorizer;
 
 /**
  * Create a graph with one node per display path. The node name is the file name without the extension.

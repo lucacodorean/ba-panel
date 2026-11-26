@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Graph\GraphBuilder;
-use Lucacodorean\BaPanel\Graph\Node;
+use Lucacodorean\BaPanel\Core\Graph\GraphBuilder;
+use Lucacodorean\BaPanel\Core\Graph\Node;
 use Lucacodorean\BaPanel\Tests\Support\PanelConfig;
 use Lucacodorean\BaPanel\Tests\Support\TemporaryFilesystem;
 use Lucacodorean\BaPanel\Tests\TestCase;

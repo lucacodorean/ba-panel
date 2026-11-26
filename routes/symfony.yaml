@@ -1,0 +1,8 @@
+# The Symfony routes of the panel. The bundle loader returns no routes when "ba_panel.enabled" is false.
+# Import this file in the host, for example in config/routes/ba_panel.yaml:
+#
+# ba_panel:
+#     resource: '@BaPanelBundle/routes/symfony.yaml'
+ba_panel:
+    resource: .
+    type: ba_panel

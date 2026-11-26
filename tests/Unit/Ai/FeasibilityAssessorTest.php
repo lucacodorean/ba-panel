@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Ai\FeasibilityAgent;
-use Lucacodorean\BaPanel\Ai\FeasibilityAssessor;
-use Lucacodorean\BaPanel\Graph\DocumentRenderer;
-use Lucacodorean\BaPanel\Graph\FrontMatterParser;
-use Lucacodorean\BaPanel\Graph\Node;
-use Lucacodorean\BaPanel\Markdown\SafeMarkdownConverter;
-use Lucacodorean\BaPanel\Reports\Enums\ReportStatus;
-use Lucacodorean\BaPanel\Reports\FeasibilityReport;
-use Lucacodorean\BaPanel\Reports\PackageVersion;
-use Lucacodorean\BaPanel\Reports\ReportMetadata;
-use Lucacodorean\BaPanel\Reports\ReportMetadataFactory;
+use Lucacodorean\BaPanel\Core\Ai\FeasibilityAgent;
+use Lucacodorean\BaPanel\Core\Ai\FeasibilityAssessor;
+use Lucacodorean\BaPanel\Core\Graph\DocumentRenderer;
+use Lucacodorean\BaPanel\Core\Graph\FrontMatterParser;
+use Lucacodorean\BaPanel\Core\Graph\Node;
+use Lucacodorean\BaPanel\Core\Markdown\SafeMarkdownConverter;
+use Lucacodorean\BaPanel\Core\Reports\Enums\ReportStatus;
+use Lucacodorean\BaPanel\Core\Reports\FeasibilityReport;
+use Lucacodorean\BaPanel\Core\Reports\PackageVersion;
+use Lucacodorean\BaPanel\Core\Reports\ReportMetadata;
+use Lucacodorean\BaPanel\Core\Reports\ReportMetadataFactory;
 use Lucacodorean\BaPanel\Tests\Support\FeasibilityReportFixture;
 use Lucacodorean\BaPanel\Tests\Support\TemporaryFilesystem;
 use NeuronAI\Agent\AgentInterface;

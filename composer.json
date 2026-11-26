@@ -11,17 +11,29 @@
     ],
     "require": {
         "php": "^8.3",
-        "illuminate/routing": "^13.5",
-        "illuminate/support": "^13.5",
-        "illuminate/view": "^13.5",
+        "composer-runtime-api": "^2.2",
         "league/commonmark": "^2.8",
         "neuron-core/neuron-ai": "^4.1",
         "symfony/yaml": "^7.4|^8.0"
     },
     "require-dev": {
+        "illuminate/routing": "^13.5",
+        "illuminate/support": "^13.5",
         "orchestra/testbench": "^11.3",
         "pestphp/pest": "^5.3",
-        "phpstan/phpstan": "^2.3"
+        "phpstan/phpstan": "^2.3",
+        "symfony/framework-bundle": "^8.1",
+        "symfony/security-csrf": "^8.1"
+    },
+    "suggest": {
+        "illuminate/routing": "^13.5 Required by the Laravel shell.",
+        "illuminate/support": "^13.5 Required by the Laravel shell.",
+        "symfony/framework-bundle": "^8.1 Required by the Symfony shell.",
+        "symfony/security-csrf": "^8.1 Enables the CSRF check of the Symfony shell."
+    },
+    "conflict": {
+        "illuminate/support": "<13.5",
+        "symfony/framework-bundle": "<8.1"
     },
     "autoload": {
         "psr-4": {
@@ -39,7 +51,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Lucacodorean\\BaPanel\\BaPanelServiceProvider"
+                "Lucacodorean\\BaPanel\\Laravel\\BaPanelServiceProvider"
             ]
         }
     },

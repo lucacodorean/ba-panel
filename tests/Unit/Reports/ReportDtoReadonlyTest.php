@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Reports\AffectedComponent;
-use Lucacodorean\BaPanel\Reports\Alternative;
-use Lucacodorean\BaPanel\Reports\ApiChange;
-use Lucacodorean\BaPanel\Reports\DataModelChange;
-use Lucacodorean\BaPanel\Reports\Dependency;
-use Lucacodorean\BaPanel\Reports\EffortTask;
-use Lucacodorean\BaPanel\Reports\Enums\FeasibilityRating;
-use Lucacodorean\BaPanel\Reports\FeasibilityDimension;
-use Lucacodorean\BaPanel\Reports\FeasibilityReport;
-use Lucacodorean\BaPanel\Reports\NonFunctionalImpact;
-use Lucacodorean\BaPanel\Reports\OpenQuestion;
-use Lucacodorean\BaPanel\Reports\Risk;
+use Lucacodorean\BaPanel\Core\Reports\AffectedComponent;
+use Lucacodorean\BaPanel\Core\Reports\Alternative;
+use Lucacodorean\BaPanel\Core\Reports\ApiChange;
+use Lucacodorean\BaPanel\Core\Reports\DataModelChange;
+use Lucacodorean\BaPanel\Core\Reports\Dependency;
+use Lucacodorean\BaPanel\Core\Reports\EffortTask;
+use Lucacodorean\BaPanel\Core\Reports\Enums\FeasibilityRating;
+use Lucacodorean\BaPanel\Core\Reports\FeasibilityDimension;
+use Lucacodorean\BaPanel\Core\Reports\FeasibilityReport;
+use Lucacodorean\BaPanel\Core\Reports\NonFunctionalImpact;
+use Lucacodorean\BaPanel\Core\Reports\OpenQuestion;
+use Lucacodorean\BaPanel\Core\Reports\Risk;
 use Lucacodorean\BaPanel\Tests\Support\FeasibilityReportFixture;
 
 /**

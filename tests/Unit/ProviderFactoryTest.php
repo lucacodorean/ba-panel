@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Ai\ProviderFactory;
-use Lucacodorean\BaPanel\Exceptions\InvalidConfigurationException;
+use Lucacodorean\BaPanel\Core\Ai\ProviderFactory;
+use Lucacodorean\BaPanel\Core\Exceptions\InvalidConfigurationException;
 use NeuronAI\Providers\AIProviderInterface;
 use NeuronAI\Providers\Anthropic\Anthropic;
 use NeuronAI\Providers\Deepseek\Deepseek;

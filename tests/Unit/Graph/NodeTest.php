@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Lucacodorean\BaPanel\Graph\Node;
-use Lucacodorean\BaPanel\Graph\Relationship;
+use Lucacodorean\BaPanel\Core\Graph\Node;
+use Lucacodorean\BaPanel\Core\Graph\Relationship;
 
 it('converts the node to the public data only', function (): void {
     $node = new Node('0123456789ab', 'data-model', 'Data model', 'docs/data-model.md', '/var/www/docs/data-model.md');
